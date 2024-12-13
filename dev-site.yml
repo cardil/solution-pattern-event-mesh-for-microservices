@@ -4,7 +4,7 @@ runtime:
 site:
   title: Solution Patterns for Cloud Native Architectures (Dev Mode)  
   url: http://localhost:3000/
-  start_page: solution-pattern-template::index.adoc
+  start_page: solution-pattern-event-mesh-for-microservices::index.adoc
 
 content:
   sources:
@@ -12,8 +12,6 @@ content:
       branches: HEAD
       start_path: documentation
 asciidoc:
-  attributes:
-    title: Red Hat Solution Patterns (Dev Mode)
   extensions:
     - ./lib/remote-include-processor.js
     - ./lib/tab-block.js

@@ -9,7 +9,7 @@ jobs:
       contents: write
       pull-requests: write
     name: Delete preview for PR
-    runs-on: [ ubuntu-24.04 ]
+    runs-on: [ ubuntu-22.04 ]
     env:
       SITE_DIR: "gh-pages"
       PR_PATH: pull-${{ github.event.number }}

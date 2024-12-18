@@ -14,6 +14,9 @@ jobs:
       SITE_DIR: "gh-pages"
       PR_PATH: pull-${{ github.event.number }}
     steps:
+      - name: Make empty dir
+        run: "mkdir -p ${{ env.PR_PATH }}"
+
       - name: Removing PR preview
         uses: JamesIves/github-pages-deploy-action@v4
         with:

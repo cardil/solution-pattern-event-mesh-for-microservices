@@ -15,7 +15,7 @@ env:
 jobs:
   build_site:
     name: "Build site with Antora"
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-22.04]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,7 +35,7 @@ jobs:
       pull-requests: write
       repository-projects: write
       id-token: write
-    runs-on: [ubuntu-24.04]
+    runs-on: [ubuntu-22.04]
     needs: [build_site]
     name: "Deploy GitHub Pages"
     if: github.event_name != 'pull_request'
@@ -48,11 +48,13 @@ jobs:
           name: site
           path: "${{ github.workspace }}/${{ env.SITE_DIR }}"
       - name: Deploy to GitHub Pages
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          folder: "${{ env.SITE_DIR }}"
-          commit-message: "[CI] Publish Documentation for ${{ github.sha }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: "${{ env.SITE_DIR }}"
+          commit_message: "[CI] Publish Documentation for ${{ github.sha }}"
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
   
   # Based on : https://daiyi.co/blog/pr-previews-for-github-pages/
   deploy_preview:
@@ -63,7 +65,7 @@ jobs:
       id-token: write
     env:
       PR_PATH: pull-${{ github.event.number }}
-    runs-on: [ ubuntu-24.04 ]
+    runs-on: [ ubuntu-22.04 ]
     needs: [ build_site ]
     name: "Deploy preview for PR"
     if: github.event_name == 'pull_request'
@@ -89,12 +91,14 @@ jobs:
           path: "${{ github.workspace }}/${{ env.SITE_DIR }}"
 
       - name: Deploy PR preview
-        uses: JamesIves/github-pages-deploy-action@v4
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          folder: "${{ env.SITE_DIR }}"
-          target-folder: "${{ env.PR_PATH }}"
-          commit-message: "[CI] Publish Preview for PR #${{ github.event.number }}"
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: "${{ env.SITE_DIR }}"
+          destination_dir: "${{ env.PR_PATH }}"
+          commit_message: "[CI] Publish Preview for PR #${{ github.event.number }}"
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
 
       - name: Update comment
         uses: hasura/comment-progress@v2.3.0

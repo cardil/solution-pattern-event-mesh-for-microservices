@@ -26,6 +26,7 @@ jobs:
           folder: "${{ env.SITE_DIR }}"
           target-folder: "${{ env.PR_PATH }}"
           commit-message: "[CI] Delete Preview for PR #${{ github.event.number }}"
+          clean: false
 
       - name: Comment on PR
         uses: hasura/comment-progress@v2.3.0

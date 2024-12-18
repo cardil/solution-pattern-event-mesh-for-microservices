@@ -4,7 +4,7 @@
 :doctype: book
 
 
-= Developer Resources
+== Developer Resources
 
 * Add link to the git repo of the code
 * Add links to whitepapers, ebooks, learning paths, product pages

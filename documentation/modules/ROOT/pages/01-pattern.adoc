@@ -19,9 +19,9 @@ The core of this solution is an event mesh—a dynamic, flexible layer that
 routes, retries, and processes asynchronous events across distributed 
 components. Using _Knative Eventing_ and _CloudEvents_, this pattern enables:
 
- * *Reliable delivery* of events with retry mechanisms.
- * Simplified *asynchronous workflows*.
- * *Decoupling* of services to improve scalability, testability and resilience.
+ - *Reliable delivery* of events with retry mechanisms.
+ - Simplified *asynchronous workflows*.
+ - *Decoupling* of services to improve scalability, testability and resilience.
 
 The approach of Cabs engineering team is to extract well-defined services, using
 the _CQRS_ pattern to  identify _Commands_ from _Queries_, and model the 

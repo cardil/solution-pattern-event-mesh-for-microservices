@@ -1,4 +1,4 @@
-= Solution Pattern: Name Template
+= Building Apps around the Event Mesh
 :sectnums:
 :sectlinks:
 :doctype: book
@@ -7,12 +7,18 @@
 
 Introduction for the architecture of this solution pattern.
 
-== Common Challenges 
-
 [#tech_stack]
 == Technology Stack
 
-// Change links and text here as you see fit.
+
+The solution employs Command Query Responsibility Segregation (CQRS) to separate commands and queries:
+
+Commands are modeled as asynchronous events and handled by the event mesh.
+
+Queries are synchronous operations safe to retry.
+
+
+
 * Red Hat supported products
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift[Red Hat OpenShift]
 ** Red Hat Application Foundation

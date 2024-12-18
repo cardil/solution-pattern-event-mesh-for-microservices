@@ -8,8 +8,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      repository-projects: write
-      id-token: write
     name: Delete preview for PR
     runs-on: [ ubuntu-24.04 ]
     env:

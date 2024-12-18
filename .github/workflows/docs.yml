@@ -53,6 +53,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           folder: "${{ env.SITE_DIR }}"
           commit-message: "[CI] Publish Documentation for ${{ github.sha }}"
+          clean: false
   
   # Based on : https://daiyi.co/blog/pr-previews-for-github-pages/
   deploy_preview:
@@ -95,6 +96,7 @@ jobs:
           folder: "${{ env.SITE_DIR }}"
           target-folder: "${{ env.PR_PATH }}"
           commit-message: "[CI] Publish Preview for PR #${{ github.event.number }}"
+          clean: false
 
       - name: Update comment
         uses: hasura/comment-progress@v2.3.0

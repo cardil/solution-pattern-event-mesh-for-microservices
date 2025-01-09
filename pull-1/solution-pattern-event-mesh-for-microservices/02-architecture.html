@@ -186,20 +186,26 @@
 <h1 id="_architecture" class="sect0"><a class="anchor" href="#_architecture"></a><a class="link" href="#_architecture">Architecture</a></h1>
 <div class="openblock partintro">
 <div class="content">
-Introduction for the architecture of this solution pattern.
+<div class="paragraph">
+<p>The architecture of an event mesh-enabled system is a paradigm shift from
+traditional transactional designs to an eventual consistency model. This design
+aligns better with real-world processes, where different parts of a system may
+operate asynchronously yet collaboratively. In this section, we explore the
+technologies, flow, and structure that make the event mesh architecture
+resilient, scalable, and developer-friendly.</p>
+</div>
+<div class="paragraph">
+<p>The solution employs <em>Command Query Responsibility Segregation (CQRS)</em> to
+separate commands and queries. Commands are modeled as asynchronous events and
+handled by the event mesh. Queries are synchronous operations safe to retry.</p>
+</div>
 </div>
 </div>
 <div class="sect1">
 <h2 id="tech_stack"><a class="anchor" href="#tech_stack"></a><a class="link" href="#tech_stack">1. Technology Stack</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The solution employs Command Query Responsibility Segregation (CQRS) to separate commands and queries:</p>
-</div>
-<div class="paragraph">
-<p>Commands are modeled as asynchronous events and handled by the event mesh.</p>
-</div>
-<div class="paragraph">
-<p>Queries are synchronous operations safe to retry.</p>
+<p>Here&#8217;s the list of technologies used in this solution and its examples:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -208,33 +214,32 @@ Introduction for the architecture of this solution pattern.
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://www.redhat.com/en/technologies/cloud-computing/openshift">Red Hat OpenShift</a></p>
+<p><a href="https://www.redhat.com/en/technologies/cloud-computing/openshift">Red Hat OpenShift</a>
+&mdash; Orchestrate containerized applications. Based on <a href="https://kubernetes.io/">Kuberentes</a>.</p>
 </li>
 <li>
-<p>Red Hat Application Foundation</p>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://access.redhat.com/products/quarkus">Quarkus</a></p>
+<p><a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless">Red Hat OpenShift Serverless</a>
+&mdash; Provides the <em>Event Mesh</em> and <em>Serverless</em> capabilities. Based on <a href="https://knative.dev">Knative</a>.</p>
 </li>
 <li>
-<p><a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/openshift-streams-for-apache-kafka">Kafka Streams</a></p>
-</li>
-</ul>
-</div>
+<p><a href="https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq">Red Hat AMQ Streams</a>
+&mdash; (Optional) Provides a persistence for <em>Event Mesh</em>, likely needed in production. Based on <a href="https://strimzi.io/">Strimzi</a>.</p>
 </li>
 </ul>
 </div>
 </li>
 <li>
-<p>Other open source products:</p>
+<p>Other open source technologies:</p>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://www.postgresql.org/">PostgreSQL database</a></p>
+<p><a href="https://cloudevents.io/">CloudEvents</a> &mdash; Provides a standard for event metadata</p>
 </li>
 <li>
-<p><a href="https://helm.sh/">Helm</a></p>
+<p>Rust and <a href="https://access.redhat.com/products/quarkus">Quarkus</a> &mdash; Implementation examples.</p>
+</li>
+<li>
+<p><a href="https://opentelemetry.io/">OpenTelemetry</a> &mdash; (Optional) Facilitates tracing for observability.</p>
 </li>
 </ul>
 </div>
@@ -246,11 +251,41 @@ Introduction for the architecture of this solution pattern.
 <div class="sect1">
 <h2 id="in_depth"><a class="anchor" href="#in_depth"></a><a class="link" href="#in_depth">2. An in-depth look at the solution&#8217;s architecture</a></h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_problem_analysis"><a class="anchor" href="#_problem_analysis"></a><a class="link" href="#_problem_analysis">2.1. Problem Analysis</a></h3>
 <div class="paragraph">
-<p>Technical description including all or some of the following: architecture ir ed diagrams. In-depth details of the decisions made and solutions used. Description of each service and what it is used for. Description of any integration.</p>
+<p>Traditional transactional systems enforce strict consistency, which slows
+applications and distorts business logic. In our example, Cabs app, must
+account for a real-life events like exiting a cab, even if dependent systems
+(e.g. invoicing) experience downtime. Throwing errors, while keeps the
+consistency in already stored data, loses the new data from real life events.
+This leads to a bad impression by the end-users, and distorts the actual
+business process.</p>
+</div>
 </div>
 <div class="sect2">
-<h3 id="_using_images"><a class="anchor" href="#_using_images"></a><a class="link" href="#_using_images">2.1. Using images</a></h3>
+<h3 id="_solution_breakdown"><a class="anchor" href="#_solution_breakdown"></a><a class="link" href="#_solution_breakdown">2.2. Solution Breakdown</a></h3>
+<div class="paragraph">
+<p>Split services into independently operating microservices with distinct responsibilities.</p>
+</div>
+<div class="paragraph">
+<p>Utilize CQRS to separate commands (asynchronous state changes) from queries (synchronous, retry-safe reads).</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_event_mesh_flow"><a class="anchor" href="#_event_mesh_flow"></a><a class="link" href="#_event_mesh_flow">2.3. Event Mesh Flow</a></h3>
+<div class="paragraph">
+<p>Events like CompleteTransit are published as CloudEvents to a Knative broker.</p>
+</div>
+<div class="paragraph">
+<p>Triggers route events dynamically to the appropriate microservices.</p>
+</div>
+<div class="paragraph">
+<p>Services process events, update state, and emit new events for downstream consumers.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_using_images"><a class="anchor" href="#_using_images"></a><a class="link" href="#_using_images">2.4. Using images</a></h3>
 <div class="imageblock">
 <div class="content">
 <img src="_images/red_hat_open-hybrid-cloud.png" alt="red hat open hybrid cloud" width="30%">
@@ -261,14 +296,14 @@ Introduction for the architecture of this solution pattern.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_embedding_html"><a class="anchor" href="#_embedding_html"></a><a class="link" href="#_embedding_html">2.2. Embedding HTML</a></h3>
+<h3 id="_embedding_html"><a class="anchor" href="#_embedding_html"></a><a class="link" href="#_embedding_html">2.5. Embedding HTML</a></h3>
   <br>
   <h3> Embed HTML by surrounding it with with four +s before and after. </h3>
   <span>View the ascii doc to learn more</span>
   <br>
 </div>
 <div class="sect2">
-<h3 id="_different_decorators"><a class="anchor" href="#_different_decorators"></a><a class="link" href="#_different_decorators">2.3. Different decorators</a></h3>
+<h3 id="_different_decorators"><a class="anchor" href="#_different_decorators"></a><a class="link" href="#_different_decorators">2.6. Different decorators</a></h3>
 <div class="admonitionblock tip">
 <table>
 <tr>
@@ -327,7 +362,7 @@ Introduction for the architecture of this solution pattern.
 </div>
 </div>
 <div class="sect2">
-<h3 id="_creating_tables"><a class="anchor" href="#_creating_tables"></a><a class="link" href="#_creating_tables">2.4. Creating  tables</a></h3>
+<h3 id="_creating_tables"><a class="anchor" href="#_creating_tables"></a><a class="link" href="#_creating_tables">2.7. Creating  tables</a></h3>
 <table class="tableblock frame-all grid-all stretch">
 <colgroup>
 <col style="width: 33.3333%;">
@@ -382,7 +417,7 @@ Introduction for the architecture of this solution pattern.
 </table>
 </div>
 <div class="sect2">
-<h3 id="_content_that_can_be_copied"><a class="anchor" href="#_content_that_can_be_copied"></a><a class="link" href="#_content_that_can_be_copied">2.5. Content that can be copied</a></h3>
+<h3 id="_content_that_can_be_copied"><a class="anchor" href="#_content_that_can_be_copied"></a><a class="link" href="#_content_that_can_be_copied">2.8. Content that can be copied</a></h3>
 <div class="paragraph">
 <p>Click below to copy the content</p>
 </div>

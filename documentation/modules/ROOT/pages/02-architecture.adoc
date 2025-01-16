@@ -36,105 +36,140 @@ Here's the list of technologies used in this solution and its examples:
 [#in_depth]
 == An in-depth look at the solution's architecture
 
-////
-Technical description including all or some of the following: architecture ired diagrams. In-depth details of the decisions made and solutions used. Description of each service and what it is used for. Description of any integration.
-////
+Building applications around the Event Mesh is a solution that can be applied 
+either to existing applications or to greenfield projects. The existing
+applications can be divided by their domain boundaries. The divided parts might 
+become modules, or even external services. Those modules will issue commands,
+directed towards the Event Mesh, which will be routed towards the configured
+endpoints.
 
 === Problem Analysis
 
-Traditional transactional systems enforce strict consistency, which slows 
-applications and distorts business logic. In our example, Cabs app, must
-account for a real-life events like exiting a cab, even if dependent systems
-(e.g. invoicing) experience downtime. Throwing errors, while keeps the
-consistency in already stored data, loses the new data from real life events.
-This leads to a bad impression by the end-users, and distorts the actual
-business process.
+Traditional transactional systems enforce strict consistency, which slows
+applications and distorts business logic. In our illustrative Cabs app example,
+we must accommodate real-world scenarios, such as exiting a cab, even when
+dependent systems (e.g., invoicing) encounter disruptions. Disregarding errors,
+which preserve the integrity of existing data, discards the newly generated data
+from genuine events. This results in a negative user experience and distorts
+the actual business process, leading to potential customer dissatisfaction.
 
 === Solution Breakdown
 
-Split services into independently operating microservices with distinct responsibilities.
+The concept of employing the Event Mesh as a central, reliable hub for dispatching
+commands, as events, lies at the heart of this solution. This approach aligns
+closely with the Command Query Responsibility Segregation (CQRS) pattern, which
+distinctly categorizes commands and queries. Commands, in this context, are
+modeled as asynchronous events, designed to undergo processing by the event mesh.
+On the other hand, queries are synchronous operations, safe to retry, ensuring
+no loss of data integrity due to transient errors.
 
-Utilize CQRS to separate commands (asynchronous state changes) from queries (synchronous, retry-safe reads).
+The primary responsibility of the Event Mesh is twofold: firstly, it persists
+the incoming events, thereby maintaining a record of changes in the system's
+state. Secondly, it routes these events to their respective endpoints, ensuring
+that the appropriate microservices are notified and can subsequently update
+their internal states based on the event data.
+
+The mesh's inherent resilience is further bolstered by its exponential backoff
+strategy, which it employs when encountering operational failures. This mechanism
+ensures that the system retries the operation until it succeeds, thus mitigating
+the risk of data loss or system disruption due to transient issues.
+
+By integrating the Event Mesh into the system architecture, several architectural
+benefits are achieved:
+
+ * **Decomposition of the application into independently functioning services**:
+   This approach facilitates a division of labor, with each service handling
+   specific responsibilities. This not only enhances maintainability but also
+   fosters scalability, as services can be independently scaled based on their
+   demands.
+
+ * **Correction of systemic issues**:
+   The Event Mesh's error-handling mechanism, through retries and event
+   persistence, aids in minimizing the impact of failures on the end user.
+   This is crucial as it prevents bugs and outages from becoming visible to
+   the user, thereby preserving the system's perceived responsiveness.
+
+ * **Enhanced system performance**:
+   The system becomes more responsive, as the end user no longer needs to
+   wait for multiple, often independent, operations to complete successfully.
+   The Event Mesh's event-driven model, coupled with the retries and event
+   persistence, ensures that critical state changes are propagated swiftly and
+   reliably, thereby improving the overall user experience.
 
 === Event Mesh Flow
 
-Events like CompleteTransit are published as CloudEvents to a Knative broker.
+ * Events are published as CloudEvents to a Knative's Event Mesh.
+ * Triggers route events dynamically to the appropriate endpoints.
+ * Services process events, update state, and emit new events for downstream
+   consumers.
 
-Triggers route events dynamically to the appropriate microservices.
+image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
 
-Services process events, update state, and emit new events for downstream consumers.
+////
+Online editor:
+https://www.plantuml.com/plantuml/uml/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt
 
-=== Using images 
+@startuml
+!theme cerulean-outline
+participant "Legacy App" as Legacy
+participant "Knative Event Mesh" as Broker
+participant "Drivers Module" as FeeService
+participant "Database" as DB
 
-image::red_hat_open-hybrid-cloud.png[width=30%]
+activate Legacy
+Legacy -> Broker : Publish CalculateFee Event
+Broker --> Legacy: Confirm delivery
+deactivate Legacy
 
-{empty}
+Broker -> FeeService: Route CalculateFee Event
+activate FeeService
+FeeService --> Broker: Publish DriverFeeCalculated Event
+deactivate FeeService
 
-=== Embedding HTML
+Broker -> Legacy: Route DriverFeeCalculated Event
+activate Legacy
+Legacy -> DB: Store Trip Data
+deactivate Legacy
+@enduml
+////
 
-++++
-  <br>
-  <h3> Embed HTML by surrounding it with with four +s before and after. </h3>
-  <span>View the ascii doc to learn more</span>
-  <br> 
-++++
+The diagram illustrates the flow of events between the legacy application, the Knative Event Mesh, the fee calculator service, and the datastore.
 
+=== Supporting Legacy Systems
 
-=== Different decorators
+One of the strengths of an event mesh architecture is its ability to integrate seamlessly with legacy systems, making them more resilient and adaptable. Legacy applications can be retrofitted to produce and consume events through lightweight adapters. For instance:
 
-[TIP]
-====
-This is a Tip
-====
+ * A monolithic Java application can send events for specific operations, like CompleteTransit, instead of handling all logic internally.
+ * Event listeners can be introduced incrementally, enabling the legacy app to subscribe to events like DriverFeeCalculated without refactoring its core logic.
 
-[NOTE]
-====
-This is a NOTE
-====
+ * This approach decouples old systems from rigid workflows, allowing for gradual modernization while ensuring operational continuity.
 
-[WARNING]
-====
-This is a WARNING
-====
+=== Improving Resilience in Traditional Applications
 
-[IMPORTANT]
-====
-This is IMPORTANT
-====
+Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components. Replacing these with asynchronous event-driven communication reduces dependencies.
 
+For example, invoicing and notification services in an e-commerce platform can process OrderPlaced events independently, ensuring that downtime in one service does not block the entire order workflow.
 
-=== Creating  tables
- 
-[cols="1a,1a,1a"]
-|===
-| *Column A*  | Column *A* | _Column C_
-|
-* Lorem Ipsum
-* Lorem Ipsum
-
-|
-* Lorem Ipsum
-* Lorem Ipsum
-
-|
-* Lorem Ipsum
-* Lorem Ipsum
-|===
-
-
-
-=== Content that can be copied
-
-Click below to copy the content
-[.console-input]
-[source,shell script]
-----
-oc version #openshift cli client
-oc login --token=<token> --server=<server>
-----
-
+Retry mechanisms provided by the event mesh guarantee that transient failures are handled gracefully without data loss.
 
 [#more_tech]
-== About the Technology Stack
+== More about the Technology Stack
 
-If you want to include more details about the tech stack you used, this is the place.
+It's worth noting that _Knative's Event Mesh_ is completely transparent to the
+applications. The applications publish and consume events, usually via 
+_HTTP REST_, and the only thing that is required is the _CloudEvents_ format.
+
+The _CloudEvents_ format provides a common envelope for events with metadata
+that every event needs, such as identifier, type, timestamps, or source
+information. The format is a CNCF standard supported by a number of projects and
+doesn't enforce the use of any library.
+
+This makes the investment in _Knative's Event Mesh_ safe in terms of vendor
+lock-in. Architects can be assured that their options remain open and that
+solutions can be easily reconfigured down the road.
+
+What's more, relying on well-known and easy-to-deploy _CloudEvents_, typically
+over _HTTP_, makes testing simple and straightforward. Developers don't need
+complex development environments because the _Event Mesh_ integration can be
+easily tested with regular _REST_ send or receive tests that most developers
+are familiar with.

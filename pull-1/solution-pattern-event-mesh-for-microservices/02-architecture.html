@@ -251,190 +251,164 @@ handled by the event mesh. Queries are synchronous operations safe to retry.</p>
 <div class="sect1">
 <h2 id="in_depth"><a class="anchor" href="#in_depth"></a><a class="link" href="#in_depth">2. An in-depth look at the solution&#8217;s architecture</a></h2>
 <div class="sectionbody">
+<div class="paragraph">
+<p>Building applications around the Event Mesh is a solution that can be applied
+either to existing applications or to greenfield projects. The existing
+applications can be divided by their domain boundaries. The divided parts might
+become modules, or even external services. Those modules will issue commands,
+directed towards the Event Mesh, which will be routed towards the configured
+endpoints.</p>
+</div>
 <div class="sect2">
 <h3 id="_problem_analysis"><a class="anchor" href="#_problem_analysis"></a><a class="link" href="#_problem_analysis">2.1. Problem Analysis</a></h3>
 <div class="paragraph">
 <p>Traditional transactional systems enforce strict consistency, which slows
-applications and distorts business logic. In our example, Cabs app, must
-account for a real-life events like exiting a cab, even if dependent systems
-(e.g. invoicing) experience downtime. Throwing errors, while keeps the
-consistency in already stored data, loses the new data from real life events.
-This leads to a bad impression by the end-users, and distorts the actual
-business process.</p>
+applications and distorts business logic. In our illustrative Cabs app example,
+we must accommodate real-world scenarios, such as exiting a cab, even when
+dependent systems (e.g., invoicing) encounter disruptions. Disregarding errors,
+which preserve the integrity of existing data, discards the newly generated data
+from genuine events. This results in a negative user experience and distorts
+the actual business process, leading to potential customer dissatisfaction.</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_solution_breakdown"><a class="anchor" href="#_solution_breakdown"></a><a class="link" href="#_solution_breakdown">2.2. Solution Breakdown</a></h3>
 <div class="paragraph">
-<p>Split services into independently operating microservices with distinct responsibilities.</p>
+<p>The concept of employing the Event Mesh as a central, reliable hub for dispatching
+commands, as events, lies at the heart of this solution. This approach aligns
+closely with the Command Query Responsibility Segregation (CQRS) pattern, which
+distinctly categorizes commands and queries. Commands, in this context, are
+modeled as asynchronous events, designed to undergo processing by the event mesh.
+On the other hand, queries are synchronous operations, safe to retry, ensuring
+no loss of data integrity due to transient errors.</p>
 </div>
 <div class="paragraph">
-<p>Utilize CQRS to separate commands (asynchronous state changes) from queries (synchronous, retry-safe reads).</p>
+<p>The primary responsibility of the Event Mesh is twofold: firstly, it persists
+the incoming events, thereby maintaining a record of changes in the system&#8217;s
+state. Secondly, it routes these events to their respective endpoints, ensuring
+that the appropriate microservices are notified and can subsequently update
+their internal states based on the event data.</p>
+</div>
+<div class="paragraph">
+<p>The mesh&#8217;s inherent resilience is further bolstered by its exponential backoff
+strategy, which it employs when encountering operational failures. This mechanism
+ensures that the system retries the operation until it succeeds, thus mitigating
+the risk of data loss or system disruption due to transient issues.</p>
+</div>
+<div class="paragraph">
+<p>By integrating the Event Mesh into the system architecture, several architectural
+benefits are achieved:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Decomposition of the application into independently functioning services</strong>:
+This approach facilitates a division of labor, with each service handling
+specific responsibilities. This not only enhances maintainability but also
+fosters scalability, as services can be independently scaled based on their
+demands.</p>
+</li>
+<li>
+<p><strong>Correction of systemic issues</strong>:
+The Event Mesh&#8217;s error-handling mechanism, through retries and event
+persistence, aids in minimizing the impact of failures on the end user.
+This is crucial as it prevents bugs and outages from becoming visible to
+the user, thereby preserving the system&#8217;s perceived responsiveness.</p>
+</li>
+<li>
+<p><strong>Enhanced system performance</strong>:
+The system becomes more responsive, as the end user no longer needs to
+wait for multiple, often independent, operations to complete successfully.
+The Event Mesh&#8217;s event-driven model, coupled with the retries and event
+persistence, ensures that critical state changes are propagated swiftly and
+reliably, thereby improving the overall user experience.</p>
+</li>
+</ul>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_event_mesh_flow"><a class="anchor" href="#_event_mesh_flow"></a><a class="link" href="#_event_mesh_flow">2.3. Event Mesh Flow</a></h3>
-<div class="paragraph">
-<p>Events like CompleteTransit are published as CloudEvents to a Knative broker.</p>
+<div class="ulist">
+<ul>
+<li>
+<p>Events are published as CloudEvents to a Knative&#8217;s Event Mesh.</p>
+</li>
+<li>
+<p>Triggers route events dynamically to the appropriate endpoints.</p>
+</li>
+<li>
+<p>Services process events, update state, and emit new events for downstream
+consumers.</p>
+</li>
+</ul>
 </div>
-<div class="paragraph">
-<p>Triggers route events dynamically to the appropriate microservices.</p>
-</div>
-<div class="paragraph">
-<p>Services process events, update state, and emit new events for downstream consumers.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_using_images"><a class="anchor" href="#_using_images"></a><a class="link" href="#_using_images">2.4. Using images</a></h3>
 <div class="imageblock">
 <div class="content">
-<img src="_images/red_hat_open-hybrid-cloud.png" alt="red hat open hybrid cloud" width="30%">
+<img src="https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" alt="VP1DJiCm58JtFiMZ rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb rfgnpRIwWMVBC qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz mT YZS W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3 uuKpCNgB1JkEwQpzI FcjxoL5XgcUvdMioVL4soi iuIOQcE5N259RYPgKYMNJ 3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" width="100%">
 </div>
 </div>
 <div class="paragraph">
-<p></p>
+<p>The diagram illustrates the flow of events between the legacy application, the Knative Event Mesh, the fee calculator service, and the datastore.</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_embedding_html"><a class="anchor" href="#_embedding_html"></a><a class="link" href="#_embedding_html">2.5. Embedding HTML</a></h3>
-  <br>
-  <h3> Embed HTML by surrounding it with with four +s before and after. </h3>
-  <span>View the ascii doc to learn more</span>
-  <br>
-</div>
-<div class="sect2">
-<h3 id="_different_decorators"><a class="anchor" href="#_different_decorators"></a><a class="link" href="#_different_decorators">2.6. Different decorators</a></h3>
-<div class="admonitionblock tip">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-tip" title="Tip"></i>
-</td>
-<td class="content">
+<h3 id="_supporting_legacy_systems"><a class="anchor" href="#_supporting_legacy_systems"></a><a class="link" href="#_supporting_legacy_systems">2.4. Supporting Legacy Systems</a></h3>
 <div class="paragraph">
-<p>This is a Tip</p>
+<p>One of the strengths of an event mesh architecture is its ability to integrate seamlessly with legacy systems, making them more resilient and adaptable. Legacy applications can be retrofitted to produce and consume events through lightweight adapters. For instance:</p>
 </div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock note">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-note" title="Note"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This is a NOTE</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This is a WARNING</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="admonitionblock important">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-important" title="Important"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>This is IMPORTANT</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_creating_tables"><a class="anchor" href="#_creating_tables"></a><a class="link" href="#_creating_tables">2.7. Creating  tables</a></h3>
-<table class="tableblock frame-all grid-all stretch">
-<colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
-</colgroup>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><strong>Column A</strong></p>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p>Column <strong>A</strong></p>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="paragraph">
-<p><em>Column C</em></p>
-</div></div></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
+<div class="ulist">
 <ul>
 <li>
-<p>Lorem Ipsum</p>
+<p>A monolithic Java application can send events for specific operations, like CompleteTransit, instead of handling all logic internally.</p>
 </li>
 <li>
-<p>Lorem Ipsum</p>
+<p>Event listeners can be introduced incrementally, enabling the legacy app to subscribe to events like DriverFeeCalculated without refactoring its core logic.</p>
+</li>
+<li>
+<p>This approach decouples old systems from rigid workflows, allowing for gradual modernization while ensuring operational continuity.</p>
 </li>
 </ul>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>Lorem Ipsum</p>
-</li>
-<li>
-<p>Lorem Ipsum</p>
-</li>
-</ul>
-</div></div></td>
-<td class="tableblock halign-left valign-top"><div class="content"><div class="ulist">
-<ul>
-<li>
-<p>Lorem Ipsum</p>
-</li>
-<li>
-<p>Lorem Ipsum</p>
-</li>
-</ul>
-</div></div></td>
-</tr>
-</tbody>
-</table>
+</div>
 </div>
 <div class="sect2">
-<h3 id="_content_that_can_be_copied"><a class="anchor" href="#_content_that_can_be_copied"></a><a class="link" href="#_content_that_can_be_copied">2.8. Content that can be copied</a></h3>
+<h3 id="_improving_resilience_in_traditional_applications"><a class="anchor" href="#_improving_resilience_in_traditional_applications"></a><a class="link" href="#_improving_resilience_in_traditional_applications">2.5. Improving Resilience in Traditional Applications</a></h3>
 <div class="paragraph">
-<p>Click below to copy the content</p>
+<p>Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components. Replacing these with asynchronous event-driven communication reduces dependencies.</p>
 </div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell script hljs" data-lang="shell script">oc version #openshift cli client
-oc login --token=&lt;token&gt; --server=&lt;server&gt;</code></pre>
+<div class="paragraph">
+<p>For example, invoicing and notification services in an e-commerce platform can process OrderPlaced events independently, ensuring that downtime in one service does not block the entire order workflow.</p>
 </div>
+<div class="paragraph">
+<p>Retry mechanisms provided by the event mesh guarantee that transient failures are handled gracefully without data loss.</p>
 </div>
 </div>
 </div>
 </div>
 <div class="sect1">
-<h2 id="more_tech"><a class="anchor" href="#more_tech"></a><a class="link" href="#more_tech">3. About the Technology Stack</a></h2>
+<h2 id="more_tech"><a class="anchor" href="#more_tech"></a><a class="link" href="#more_tech">3. More about the Technology Stack</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>If you want to include more details about the tech stack you used, this is the place.</p>
+<p>It&#8217;s worth noting that <em>Knative&#8217;s Event Mesh</em> is completely transparent to the
+applications. The applications publish and consume events, usually via
+<em>HTTP REST</em>, and the only thing that is required is the <em>CloudEvents</em> format.</p>
+</div>
+<div class="paragraph">
+<p>The <em>CloudEvents</em> format provides a common envelope for events with metadata
+that every event needs, such as identifier, type, timestamps, or source
+information. The format is a CNCF standard supported by a number of projects and
+doesn&#8217;t enforce the use of any library.</p>
+</div>
+<div class="paragraph">
+<p>This makes the investment in <em>Knative&#8217;s Event Mesh</em> safe in terms of vendor
+lock-in. Architects can be assured that their options remain open and that
+solutions can be easily reconfigured down the road.</p>
+</div>
+<div class="paragraph">
+<p>What&#8217;s more, relying on well-known and easy-to-deploy <em>CloudEvents</em>, typically
+over <em>HTTP</em>, makes testing simple and straightforward. Developers don&#8217;t need
+complex development environments because the <em>Event Mesh</em> integration can be
+easily tested with regular <em>REST</em> send or receive tests that most developers
+are familiar with.</p>
 </div>
 </div>
 </div>

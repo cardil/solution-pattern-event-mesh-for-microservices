@@ -9,6 +9,38 @@
 
 Include here content related to potential existing demos: blogs, articles, recorded videos, walkthrough guides, tutorials.
 
+image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
+
+////
+Online editor:
+https://www.plantuml.com/plantuml/uml/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt
+
+@startuml
+!theme materia-outline
+participant "Legacy App" as Legacy
+participant "Knative _Event Mesh_" as Broker
+participant "Drivers Module" as FeeService
+participant "Database" as DB
+
+activate Legacy
+Legacy -> Broker : Publish CalculateFee Event
+Broker --> Legacy: Confirm delivery
+deactivate Legacy
+
+Broker -> FeeService: Route CalculateFee Event
+activate FeeService
+FeeService --> Broker: Publish DriverFeeCalculated Event
+deactivate FeeService
+
+Broker -> Legacy: Route DriverFeeCalculated Event
+activate Legacy
+Legacy -> DB: Store Trip Data
+deactivate Legacy
+@enduml
+////
+
+The diagram illustrates the flow of events between the legacy application, the Knative _Event Mesh_, the fee calculator service, and the datastore.
+
 [#demo-video]
 === Watch a demonstration
 

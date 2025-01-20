@@ -212,11 +212,11 @@ resilient, scalable, and developer-friendly.
 </li>
 <li>
 <p><a href="https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless">Red Hat OpenShift Serverless</a>
-&mdash; Provides the <em>Event Mesh</em> and <em>Serverless</em> capabilities. Based on <a href="https://knative.dev">Knative</a>.</p>
+&mdash; Provides the <em>Event Mesh</em> and <em>Serverless</em> capabilities. Based on <a href="https://knative.dev">Knative</a> project.</p>
 </li>
 <li>
 <p><a href="https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq">Red Hat AMQ Streams</a>
-&mdash; (Optional) Provides a persistence for <em>Event Mesh</em>, likely needed in production. Based on <a href="https://strimzi.io/">Strimzi</a>.</p>
+&mdash; (Optional) Provides a persistence for <em>Event Mesh</em>, likely needed in production. Based on <a href="https://strimzi.io/">Strimzi</a> project.</p>
 </li>
 </ul>
 </div>
@@ -264,9 +264,10 @@ of any potential operational disruptions affecting dependent services (e.g.,
 invoicing).</p>
 </div>
 <div class="paragraph">
-<p>In such scenarios, transactional applications typically return an error, resulting
-in an adverse user experience and a deviation from the genuine business process,
-potentially leading to customer dissatisfaction.</p>
+<p>In such scenarios, transactional applications typically return an error, which
+prevents any data from being changed, and causes the loss of real-world intent
+of end-users. This results in an adverse user experience and a deviation from
+the genuine business process, potentially leading to customer dissatisfaction.</p>
 </div>
 </div>
 <div class="sect2">
@@ -277,11 +278,12 @@ dispatching commands, as events, lies at the heart of this solution. This
 approach aligns closely with the Command Query Responsibility Segregation
 (<em>CQRS</em>) pattern, which distinctly categorizes commands and queries. Commands,
 in this context, are modeled as asynchronous events, designed to undergo
-processing by the <em>Event Mesh</em>. On the other hand, queries are synchronous operations, safe to retry, ensuring
-no loss of data integrity due to transient errors.</p>
+processing by the <em>Event Mesh</em>. On the other hand, queries are synchronous
+operations, safe to retry, ensuring no loss of data integrity due to transient
+errors.</p>
 </div>
 <div class="paragraph">
-<p>The primary responsibility of the <em>Event Mesh</em> is twofold: firstly, it persists
+<p>The primary responsibility of the <em>Event Mesh</em> is twofold. Firstly, it persists
 the incoming events, thereby maintaining a record of changes in the system&#8217;s
 state. Secondly, it routes these events to their respective endpoints, ensuring
 that the appropriate microservices are notified and can subsequently update
@@ -321,29 +323,68 @@ The <em>Event Mesh</em>'s event-driven model, coupled with the retries and event
 persistence, ensures that critical state changes are propagated swiftly and
 reliably, thereby improving the overall user experience.</p>
 </li>
+<li>
+<p><strong>Improved business alignment</strong>:
+By embracing an eventual consistency model, the <em>Event Mesh</em> aligns
+closely with the inherent nature of most real-world business processes.
+Unlike traditional transactional systems that strive for immediate,
+irreversible consistency, the <em>Event Mesh</em> allows for a more flexible and
+adaptive approach to data consistency. This results in better alignment with
+business requirements, as it supports scenarios where multiple services
+collaborate and synchronize their operations, making the whole state
+eventually consistent, without the constraint of strict, synchronous
+consistency.</p>
+</li>
 </ul>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_event_mesh_flow"><a class="anchor" href="#_event_mesh_flow"></a><a class="link" href="#_event_mesh_flow">2.3. <em>Event Mesh</em> Flow</a></h3>
-<div class="ulist">
-<ul>
+<div class="paragraph">
+<p>The event-driven flow enables eventual consistent collaboration and state
+synchronization between services, fostering a resilient, scalable, and
+developer-friendly system architecture.</p>
+</div>
+<div class="paragraph">
+<p>A usual flow may look like:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
 <li>
-<p>Events are published as <em>Cloud Events</em> to a <em>Knative</em>'s <em>Event Mesh</em>.</p>
+<p>An end-user application sends a request, which forms a <em>Command</em> event
+in the end transferred to the <em>Event Mesh</em>.</p>
 </li>
 <li>
-<p>Triggers route events dynamically to the appropriate endpoints.</p>
+<p>The <em>Event Mesh</em> (Broker) persists the event in Kafka (Kafka). After successful
+persistence <em>Event Mesh</em> returns the success information, and at this point
+the operation could already be considered successful, from the end-user point
+of view.</p>
 </li>
 <li>
-<p>Services process events, update state, and emit new events for downstream
-consumers.</p>
+<p>The <em>Event Mesh</em> routes the event to the appropriate endpoint based on the
+event&#8217;s metadata and configured rules.</p>
 </li>
-</ul>
+<li>
+<p>The receiving service receive the event and process it, updating their
+internal states and potentially emitting new events for downstream consumers.
+The potential events are transmitted to the <em>Event Mesh</em>.</p>
+</li>
+<li>
+<p>The dispatch loop continues until the event queue is empty and all the events
+are processed successfully. The failures are being automatically retried by
+the <em>Event Mesh</em> using exponential backoff algorithm.</p>
+</li>
+</ol>
 </div>
 <div class="imageblock">
 <div class="content">
 <img src="https://www.plantuml.com/plantuml/svg/XPBHhjGW48RlUOgnzzi7wCNcsDGOeySOZG_0qkcMB8NA33MDyTsbb6CNNUCT_FF_tv0PdeYbvp0PyOf7d10coUYrFBd0HbiKTDDsbbvEi5rvdH5cPzPK4yguq4FrPa7By8mqLl1302WtpSvkMlNUIjOBGklT3Nq5al8nshu531WjShZ9L4adyLE8mPaUFLJFMda7X7xH2kalUESZsXDysGs9aRKiHNylMLuauM7lsdjdrvRGTtPnMcbxBR2xYe-mHo23i_TFy4V7Uj1AidQsODyNihuDuIxw0QzIhK0hCKxb68xgwtbEkFrQF34xkbt8Wsgt9hbowjrtUphdtJJmALoCfX5msoozk6glhoFNvvY51hxEiG6cBcBF7OQqIOWSzAI9NpZbSg0sE73zpwuPUehlAeCDV7Q1yO4lZ_w_ldBafVdnK-lpyM4QU8jCeEtWG5vY2lgz98h-ANNyXjyJomfuLCxt99xGzc4olm00" alt="XPBHhjGW48RlUOgnzzi7wCNcsDGOeySOZG 0qkcMB8NA33MDyTsbb6CNNUCT FF tv0PdeYbvp0PyOf7d10coUYrFBd0HbiKTDDsbbvEi5rvdH5cPzPK4yguq4FrPa7By8mqLl1302WtpSvkMlNUIjOBGklT3Nq5al8nshu531WjShZ9L4adyLE8mPaUFLJFMda7X7xH2kalUESZsXDysGs9aRKiHNylMLuauM7lsdjdrvRGTtPnMcbxBR2xYe mHo23i TFy4V7Uj1AidQsODyNihuDuIxw0QzIhK0hCKxb68xgwtbEkFrQF34xkbt8Wsgt9hbowjrtUphdtJJmALoCfX5msoozk6glhoFNvvY51hxEiG6cBcBF7OQqIOWSzAI9NpZbSg0sE73zpwuPUehlAeCDV7Q1yO4lZ w ldBafVdnK lpyM4QU8jCeEtWG5vY2lgz98h ANNyXjyJomfuLCxt99xGzc4olm00" width="100%">
 </div>
+</div>
+<div class="paragraph">
+<p>The diagram illustrates the example flow of events between the applications,
+the Knative <em>Event Mesh</em>, and the datastores which persist settled state of the
+system.</p>
 </div>
 </div>
 <div class="sect2">

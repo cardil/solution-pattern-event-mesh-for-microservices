@@ -4,7 +4,7 @@ Cabs is a fictional transportation company. Engineers at Cabs were struggling
 with their transactional-style, monolith application. They recently
 started an effort to modernize it.
 
-The team saw a recent https://www.youtube.com/watch?v=Rc5IO6S6ZOk[talk on _Event Mesh_].
+The team saw a https://www.youtube.com/watch?v=Rc5IO6S6ZOk[talk on _Event Mesh_].
 The talk presented the advantages of moving beyond transactional architectures
 in favor of eventual consistency. By leveraging event meshes with technologies
 like Knative, developers can achieve decoupled, reliable microservices without

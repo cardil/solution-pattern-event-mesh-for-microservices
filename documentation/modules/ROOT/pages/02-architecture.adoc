@@ -21,9 +21,9 @@ Here's the list of technologies used in this solution and its examples:
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift[Red Hat OpenShift]
    &mdash; Orchestrate containerized applications. Based on https://kubernetes.io/[Kuberentes].
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
-   &mdash; Provides the _Event Mesh_ and _Serverless_ capabilities. Based on https://knative.dev[Knative].
+   &mdash; Provides the _Event Mesh_ and _Serverless_ capabilities. Based on https://knative.dev[Knative] project.
 ** https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq[Red Hat AMQ Streams]
-   &mdash; (Optional) Provides a persistence for _Event Mesh_, likely needed in production. Based on https://strimzi.io/[Strimzi].
+   &mdash; (Optional) Provides a persistence for _Event Mesh_, likely needed in production. Based on https://strimzi.io/[Strimzi] project.
 * Other open source technologies:
 ** https://cloudevents.io/[CloudEvents] &mdash; Provides a standard for event metadata
 ** Rust and https://access.redhat.com/products/quarkus[Quarkus] &mdash; Implementation examples.
@@ -49,9 +49,10 @@ destination, the system should reliably capture this real-world event, irrespect
 of any potential operational disruptions affecting dependent services (e.g.,
 invoicing).
 
-In such scenarios, transactional applications typically return an error, resulting
-in an adverse user experience and a deviation from the genuine business process,
-potentially leading to customer dissatisfaction.
+In such scenarios, transactional applications typically return an error, which
+prevents any data from being changed, and causes the loss of real-world intent
+of end-users. This results in an adverse user experience and a deviation from
+the genuine business process, potentially leading to customer dissatisfaction.
 
 === Solution Breakdown
 
@@ -60,10 +61,11 @@ dispatching commands, as events, lies at the heart of this solution. This
 approach aligns closely with the Command Query Responsibility Segregation
 (_CQRS_) pattern, which distinctly categorizes commands and queries. Commands,
 in this context, are modeled as asynchronous events, designed to undergo
-processing by the _Event Mesh_. On the other hand, queries are synchronous operations, safe to retry, ensuring
-no loss of data integrity due to transient errors.
+processing by the _Event Mesh_. On the other hand, queries are synchronous
+operations, safe to retry, ensuring no loss of data integrity due to transient
+errors.
 
-The primary responsibility of the _Event Mesh_ is twofold: firstly, it persists
+The primary responsibility of the _Event Mesh_ is twofold. Firstly, it persists
 the incoming events, thereby maintaining a record of changes in the system's
 state. Secondly, it routes these events to their respective endpoints, ensuring
 that the appropriate microservices are notified and can subsequently update
@@ -96,12 +98,39 @@ benefits are achieved:
    persistence, ensures that critical state changes are propagated swiftly and
    reliably, thereby improving the overall user experience.
 
+ * **Improved business alignment**:
+   By embracing an eventual consistency model, the _Event Mesh_ aligns
+   closely with the inherent nature of most real-world business processes.
+   Unlike traditional transactional systems that strive for immediate,
+   irreversible consistency, the _Event Mesh_ allows for a more flexible and
+   adaptive approach to data consistency. This results in better alignment with
+   business requirements, as it supports scenarios where multiple services
+   collaborate and synchronize their operations, making the whole state
+   eventually consistent, without the constraint of strict, synchronous
+   consistency.
+
 === _Event Mesh_ Flow
 
- * Events are published as _Cloud Events_ to a _Knative_'s _Event Mesh_.
- * Triggers route events dynamically to the appropriate endpoints.
- * Services process events, update state, and emit new events for downstream
-   consumers.
+The event-driven flow enables eventual consistent collaboration and state
+synchronization between services, fostering a resilient, scalable, and 
+developer-friendly system architecture.
+
+A usual flow may look like:
+
+1. An end-user application sends a request, which forms a _Command_ event
+   in the end transferred to the _Event Mesh_.
+2. The _Event Mesh_ (Broker) persists the event in Kafka (Kafka). After successful
+   persistence _Event Mesh_ returns the success information, and at this point
+   the operation could already be considered successful, from the end-user point
+   of view.
+3. The _Event Mesh_ routes the event to the appropriate endpoint based on the
+   event's metadata and configured rules.
+4. The receiving service receive the event and process it, updating their
+   internal states and potentially emitting new events for downstream consumers.
+   The potential events are transmitted to the _Event Mesh_.
+5. The dispatch loop continues until the event queue is empty and all the events
+   are processed successfully. The failures are being automatically retried by 
+   the _Event Mesh_ using exponential backoff algorithm.
 
 image::https://www.plantuml.com/plantuml/svg/XPBHhjGW48RlUOgnzzi7wCNcsDGOeySOZG_0qkcMB8NA33MDyTsbb6CNNUCT_FF_tv0PdeYbvp0PyOf7d10coUYrFBd0HbiKTDDsbbvEi5rvdH5cPzPK4yguq4FrPa7By8mqLl1302WtpSvkMlNUIjOBGklT3Nq5al8nshu531WjShZ9L4adyLE8mPaUFLJFMda7X7xH2kalUESZsXDysGs9aRKiHNylMLuauM7lsdjdrvRGTtPnMcbxBR2xYe-mHo23i_TFy4V7Uj1AidQsODyNihuDuIxw0QzIhK0hCKxb68xgwtbEkFrQF34xkbt8Wsgt9hbowjrtUphdtJJmALoCfX5msoozk6glhoFNvvY51hxEiG6cBcBF7OQqIOWSzAI9NpZbSg0sE73zpwuPUehlAeCDV7Q1yO4lZ_w_ldBafVdnK-lpyM4QU8jCeEtWG5vY2lgz98h-ANNyXjyJomfuLCxt99xGzc4olm00[width=100%]
 
@@ -141,6 +170,10 @@ DriversService ..> DriversDB: Gets info about drivers
 InvoiceService ..> InvoiceDB: Update Invoice records
 @enduml
 ////
+
+The diagram illustrates the example flow of events between the applications, 
+the Knative _Event Mesh_, and the datastores which persist settled state of the
+system.
 
 === Supporting Legacy Systems
 

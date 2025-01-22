@@ -5,12 +5,9 @@
 
 = Architecture 
 
-The architecture of an event mesh-enabled system is a paradigm shift from 
-traditional transactional designs to an eventual consistency model. This design
-aligns better with real-world processes, where different parts of a system may
-operate asynchronously yet collaboratively. In this section, we explore the
-technologies, flow, and structure that make the event mesh architecture
-resilient, scalable, and developer-friendly.
+The architecture of an event mesh-enabled system is a paradigm shift from traditional transactional designs to an eventual consistency model.
+This design aligns better with real-world processes, where different parts of a system may operate asynchronously yet collaboratively.
+In this section, we explore the technologies, flow, and structure that make the event mesh architecture resilient, scalable, and developer-friendly.
 
 [#tech_stack]
 == Technology Stack
@@ -19,11 +16,14 @@ Here's the list of technologies used in this solution and its examples:
 
 * Red Hat supported products
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift[Red Hat OpenShift]
-   &mdash; Orchestrate containerized applications. Based on https://kubernetes.io/[Kuberentes].
+&mdash; Orchestrate containerized applications.
+Based on https://kubernetes.io/[Kuberentes].
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
-   &mdash; Provides the _Event Mesh_ and _Serverless_ capabilities. Based on https://knative.dev[Knative] project.
+&mdash; Provides the _Event Mesh_ and _Serverless_ capabilities.
+Based on https://knative.dev[Knative] project.
 ** https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq[Red Hat AMQ Streams]
-   &mdash; (Optional) Provides a persistence for _Event Mesh_, likely needed in production. Based on https://strimzi.io/[Strimzi] project.
+&mdash; (Optional) Provides a persistence for _Event Mesh_, likely needed in production.
+Based on https://strimzi.io/[Strimzi] project.
 * Other open source technologies:
 ** https://cloudevents.io/[CloudEvents] &mdash; Provides a standard for event metadata
 ** Rust and https://access.redhat.com/products/quarkus[Quarkus] &mdash; Implementation examples.
@@ -32,105 +32,69 @@ Here's the list of technologies used in this solution and its examples:
 [#in_depth]
 == An in-depth look at the solution's architecture
 
-Building applications around the Event Mesh is a solution that can be applied
-both to existing and new projects. For existing applications, domain boundaries
-can guide the division into modular components, which may evolve into separate
-services. These modules will generate commands intended for the _Event Mesh_,
-which will then route these events to their designated endpoints. The _Event
-Mesh_ will allow for such transition, gradually making the system not only more
-responsive but also better suited to the real-world business logic.
+Building applications around the Event Mesh is a solution that can be applied both to existing and new projects.
+For existing applications, domain boundaries can guide the division into modular components, which may evolve into separate services.
+These modules will generate commands intended for the _Event Mesh_, which will then route these events to their designated endpoints.
+The _Event Mesh_ will allow for such transition, gradually making the system not only more responsive but also better suited to the real-world business logic.
 
 === Problem Analysis
 
-Traditional systems often enforce strict transactional consistency,
-which can impede application performance and compromise business logic.
-For instance, upon the completion of a ride-sharing service at the end-user's
-destination, the system should reliably capture this real-world event, irrespective
-of any potential operational disruptions affecting dependent services (e.g.,
-invoicing).
+Traditional systems often enforce strict transactional consistency, which can impede application performance and compromise business logic.
+For instance, upon the completion of a ride-sharing service at the end-user's destination, the system should reliably capture this real-world event.
+The capture should be performed regardless of any potential operational disruptions affecting dependent services (e.g., invoicing).
 
-In such scenarios, transactional applications typically return an error, which
-prevents any data from being changed, and causes the loss of real-world intent
-of end-users. This results in an adverse user experience and a deviation from
-the genuine business process, potentially leading to customer dissatisfaction.
+In such scenarios, transactional applications typically return an error, which prevents any data from being changed, and causes the loss of real-world intent of end-users.
+This results in an adverse user experience and a deviation from the genuine business process, potentially leading to customer dissatisfaction.
 
 === Solution Breakdown
 
-The concept of employing the _Event Mesh_ as a central, reliable hub for 
-dispatching commands, as events, lies at the heart of this solution. This
-approach aligns closely with the Command Query Responsibility Segregation
-(_CQRS_) pattern, which distinctly categorizes commands and queries. Commands,
-in this context, are modeled as asynchronous events, designed to undergo
-processing by the _Event Mesh_. On the other hand, queries are synchronous
-operations, safe to retry, ensuring no loss of data integrity due to transient
-errors.
+The concept of employing the _Event Mesh_ as a central, reliable hub for dispatching commands, as events, lies at the heart of this solution.
+This approach aligns closely with the Command Query Responsibility Segregation (_CQRS_) pattern, which distinctly categorizes commands and queries.
+Commands, in this context, are modeled as asynchronous events, designed to undergo processing by the _Event Mesh_.
+On the other hand, queries are synchronous operations, safe to retry, ensuring no loss of data integrity due to transient errors.
 
-The primary responsibility of the _Event Mesh_ is twofold. Firstly, it persists
-the incoming events, thereby maintaining a record of changes in the system's
-state. Secondly, it routes these events to their respective endpoints, ensuring
-that the appropriate microservices are notified and can subsequently update
-their internal states based on the event data.
+The primary responsibility of the _Event Mesh_ is twofold.
+Firstly, it persists the incoming events, thereby maintaining a record of changes in the system's state.
+Secondly, it routes these events to their respective endpoints, ensuring that the appropriate microservices are notified and can subsequently update their internal states based on the event data.
 
-The mesh's inherent resilience is further bolstered by its exponential backoff
-strategy, which it employs when encountering operational failures. This mechanism
-ensures that the system retries the operation until it succeeds, thus mitigating
-the risk of data loss or system disruption due to transient issues.
+The mesh's inherent resilience is further bolstered by its exponential backoff strategy, which it employs when encountering operational failures.
+This mechanism ensures that the system retries the operation until it succeeds, thus mitigating the risk of data loss or system disruption due to transient issues.
 
-By integrating the _Event Mesh_ into the system architecture, several architectural
-benefits are achieved:
+By integrating the _Event Mesh_ into the system architecture, several architectural benefits are achieved:
 
- * **Decomposition of the application into independently functioning services**:
-   This approach facilitates a division of labor, with each service handling
-   specific responsibilities. This not only enhances maintainability but also
-   fosters scalability, as services can be independently scaled based on their
-   demands.
+* **Decomposition of the application into independently functioning services**:
+This approach facilitates a division of labor, with each service handling specific responsibilities.
+This not only enhances maintainability but also fosters scalability, as services can be independently scaled based on their demands.
 
- * **Correction of systemic issues**:
-   The _Event Mesh_'s error-handling mechanism, through retries and event
-   persistence, aids in minimizing the impact of failures on the end user.
-   This is crucial as it prevents bugs and outages from becoming visible to
-   the user, thereby preserving the system's perceived responsiveness.
+* **Improved business alignment**:
+By embracing an eventual consistency model, the _Event Mesh_ aligns closely with the inherent nature of most real-world business processes.
+Unlike traditional transactional systems that strive for immediate, irreversible consistency, the _Event Mesh_ allows for a more flexible and adaptive approach to data consistency.
+This results in better alignment with business requirements, as it supports scenarios where multiple services collaborate and synchronize their operations, making the whole state eventually consistent, without the constraint of strict, synchronous consistency.
 
- * **Enhanced system performance**:
-   The system becomes more responsive, as the end user no longer needs to
-   wait for multiple, often independent, operations to complete successfully.
-   The _Event Mesh_'s event-driven model, coupled with the retries and event
-   persistence, ensures that critical state changes are propagated swiftly and
-   reliably, thereby improving the overall user experience.
+* **Avoidance of systemic issues**:
+The _Event Mesh_'s error-handling mechanism, through retries and event persistence, aids in minimizing the impact of failures on the end user.
+This is crucial as it prevents bugs and outages from becoming visible to the user, thereby preserving the system's perceived responsiveness.
 
- * **Improved business alignment**:
-   By embracing an eventual consistency model, the _Event Mesh_ aligns
-   closely with the inherent nature of most real-world business processes.
-   Unlike traditional transactional systems that strive for immediate,
-   irreversible consistency, the _Event Mesh_ allows for a more flexible and
-   adaptive approach to data consistency. This results in better alignment with
-   business requirements, as it supports scenarios where multiple services
-   collaborate and synchronize their operations, making the whole state
-   eventually consistent, without the constraint of strict, synchronous
-   consistency.
+* **Enhanced system performance**:
+The system becomes more responsive, as the end user no longer needs to wait for multiple, often independent, operations to complete successfully.
+The _Event Mesh_'s event-driven model, coupled with the retries and event persistence, ensures that critical state changes are propagated swiftly and reliably, thereby improving the overall user experience.
 
 === _Event Mesh_ Flow
 
-The event-driven flow enables eventual consistent collaboration and state
-synchronization between services, fostering a resilient, scalable, and 
-developer-friendly system architecture.
+The event-driven flow enables eventual consistent collaboration and state synchronization between services, fostering a resilient, scalable, and developer-friendly system architecture.
 
 A usual flow may look like:
 
-1. An end-user application sends a request, which forms a _Command_ event
-   in the end transferred to the _Event Mesh_.
-2. The _Event Mesh_ (Broker) persists the event in Kafka (Kafka). After successful
-   persistence _Event Mesh_ returns the success information, and at this point
-   the operation could already be considered successful, from the end-user point
-   of view.
-3. The _Event Mesh_ routes the event to the appropriate endpoint based on the
-   event's metadata and configured rules.
-4. The receiving service receive the event and process it, updating their
-   internal states and potentially emitting new events for downstream consumers.
-   The potential events are transmitted to the _Event Mesh_.
-5. The dispatch loop continues until the event queue is empty and all the events
-   are processed successfully. The failures are being automatically retried by 
-   the _Event Mesh_ using exponential backoff algorithm.
+1. An end-user application sends a request, which forms a _Command_ type event, which is transferred to the _Event Mesh_.
+2. The _Event Mesh_ (Broker) persists the event in a queue (e.g. Kafka).
+After successful persistence _Event Mesh_ returns the success information.
+At this point, the operation could already be considered successful, from the end-user point of view.
+It will eventually settle correctly in all downstream systems.
+3. The _Event Mesh_ routes the event to the appropriate endpoint based on the event's metadata and configured triggering rules.
+4. The endpoints receive the events and process them, updating their internal states and potentially emitting new events for downstream consumers.
+The potential events are transmitted to the _Event Mesh_.
+5. The dispatch loop continues until the event queue is empty and all the events are processed successfully.
+The failures are being automatically retried by the _Event Mesh_ using exponential backoff algorithm.
 
 image::https://www.plantuml.com/plantuml/svg/XPBHhjGW48RlUOgnzzi7wCNcsDGOeySOZG_0qkcMB8NA33MDyTsbb6CNNUCT_FF_tv0PdeYbvp0PyOf7d10coUYrFBd0HbiKTDDsbbvEi5rvdH5cPzPK4yguq4FrPa7By8mqLl1302WtpSvkMlNUIjOBGklT3Nq5al8nshu531WjShZ9L4adyLE8mPaUFLJFMda7X7xH2kalUESZsXDysGs9aRKiHNylMLuauM7lsdjdrvRGTtPnMcbxBR2xYe-mHo23i_TFy4V7Uj1AidQsODyNihuDuIxw0QzIhK0hCKxb68xgwtbEkFrQF34xkbt8Wsgt9hbowjrtUphdtJJmALoCfX5msoozk6glhoFNvvY51hxEiG6cBcBF7OQqIOWSzAI9NpZbSg0sE73zpwuPUehlAeCDV7Q1yO4lZ_w_ldBafVdnK-lpyM4QU8jCeEtWG5vY2lgz98h-ANNyXjyJomfuLCxt99xGzc4olm00[width=100%]
 
@@ -171,45 +135,111 @@ InvoiceService ..> InvoiceDB: Update Invoice records
 @enduml
 ////
 
-The diagram illustrates the example flow of events between the applications, 
-the Knative _Event Mesh_, and the datastores which persist settled state of the
-system.
+The diagram illustrates the example flow of events between the applications, the Knative _Event Mesh_, and the datastores which persist settled state of the system.
+
+[NOTE]
+====
+Notice the applications aren't pulling the events from the queue.
+In fact they aren't aware of any.
+The _Event Mesh_ is the one controlling the flow, and retrying when needed.
+
+There are *no additional* libraries needed to consume events from _Event Mesh_.
+The _Event Mesh_ pushes the events as _CloudEvents_ encoded as _REST_ messages.
+====
+
+=== _Work Ledger_ analogy
+
+A good way of thinking about the _Event Mesh_ and its persistent queue backend is the _Work Ledger_ analogy.
+Like in olden days, the clerk was keeping his to-do work in the _Work Ledger_ (e.g. a tray for paper forms).
+Then he was picking the next form, and processing it, making changes within the physical file cabinets.
+In case of rare and unexpected issues (e.g. Invoicing dept being unavailable), the clerk would just put the data back onto the _Work Ledger_ to be processed later.
+
+The _Event Mesh_ is processing the data in very similar fashion.
+The data is held in the _Event Mesh_ only until the system successfully consumes it.
+
+=== Differences from the _Event Sourcing_
+
+The _Event Mesh_ pattern could be mistaken for _Event Sourcing_, as both are Event-Driven approaches (_EDA_) to application architecture.
+However, _Event Mesh_ has few improvements over the shortcomings of _Event Sourcing_ approach.
+
+The data is held in the _Event Mesh_ only until the system successfully consumes it, settling the data in various datastores to a consistent state.
+This effectively avoids the need to keep the applications backward compatible with all the events ever emitted.
+Introducing breaking changes in the event schema is as easy as making sure to consume all the events of given type from the _Event Mesh_.
+This also works for the systems which can't have downtime windows.
+The applications could have short-lived backward compatible layers for such situations.
+When all the events are processed, the backward compatible code may be removed simplifying the maintenance.
+
+Because in the long-term, the regular datastores are the source of truth for the system, all traditional techniques for application maintenance apply well.
+It is also, easier to understand for developers, as it avoids sophisticated event handlers logic, and reconciling into the read database abstraction.
+
+=== Differences from the _Service Mesh_
+
+Worth pointing out are the differences from the _Service Mesh_ pattern.
+The _Service Mesh_ pattern is intended to improve the resilience of synchronous communications which return the response.
+The _Service Mesh_ effectively raises the uptime of the dependent endpoints by retrying and backoff policies.
+The uptime can't be raised to 100%, though, so _Service Mesh_ still can lose the messages.
+
+The table below captures the key differences:
+
+[cols="^1,^2,^2"]
+|===
+|| Service Mesh | Event Mesh
+
+|
+*Similarities*
+
+2+|
+* Flexibility
+* Robustness
+* Decoupling
+
+|
+*Differences*
+|
+* Synchronous
+* Request and Response
+* Better for queries
+
+|
+* Asynchronous
+* Events
+* Better for commands
+
+|===
 
 === Supporting Legacy Systems
 
-One of the strengths of an _Event Mesh_ architecture is its ability to integrate seamlessly with legacy systems, making them more resilient and adaptable. Legacy applications can be retrofitted to produce and consume events through lightweight adapters. For instance:
+One of the strengths of an _Event Mesh_ architecture is its ability to integrate seamlessly with legacy systems, making them more resilient and adaptable.
+Legacy applications can be retrofitted to produce and consume events through lightweight adapters.
+For instance:
 
- * A monolithic Java application can send events for specific operations, like CompleteTransit, instead of handling all logic internally.
- * Event listeners can be introduced incrementally, enabling the legacy app to subscribe to events like DriverFeeCalculated without refactoring its core logic.
+* A monolithic legacy application can send events for specific operations, instead of handling all logic internally in transactional fashion.
 
- * This approach decouples old systems from rigid workflows, allowing for gradual modernization while ensuring operational continuity.
+* Event listeners can be introduced incrementally, enabling the legacy app to subscribe to events without refactoring its core logic.
+
+* This approach decouples old systems from rigid workflows, allowing for gradual modernization while ensuring operational continuity.
 
 === Improving Resilience in Traditional Applications
 
-Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components. Replacing these with asynchronous event-driven communication reduces dependencies.
+Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
+Replacing these with asynchronous event-driven communication reduces dependencies.
 
-For example, invoicing and notification services in an e-commerce platform can process OrderPlaced events independently, ensuring that downtime in one service does not block the entire order workflow.
+For example, invoicing and notification services in an e-commerce platform can process events independently, ensuring that downtime in one service does not block the entire workflow.
 
 Retry mechanisms provided by the _Event Mesh_ guarantee that transient failures are handled gracefully without data loss.
 
 [#more_tech]
 == More about the Technology Stack
 
-It's worth noting that _Knative's Event Mesh_ is completely transparent to the
-applications. The applications publish and consume events, usually via 
+It's worth noting that _Knative's Event Mesh_ is completely transparent to the applications.
+The applications publish and consume events, usually via
 _HTTP REST_, and the only thing that is required is the _CloudEvents_ format.
 
-The _CloudEvents_ format provides a common envelope for events with metadata
-that every event needs, such as identifier, type, timestamps, or source
-information. The format is a CNCF standard supported by a number of projects and
-doesn't enforce the use of any library.
+The _CloudEvents_ format provides a common envelope for events with metadata that every event needs, such as identifier, type, timestamps, or source information.
+The format is a CNCF standard supported by a number of projects and doesn't enforce the use of any library.
 
-This makes the investment in _Knative's Event Mesh_ safe in terms of vendor
-lock-in. Architects can be assured that their options remain open and that
-solutions can be easily reconfigured down the road.
+This makes the investment in _Knative's Event Mesh_ safe in terms of vendor lock-in.
+Architects can be assured that their options remain open and that solutions can be easily reconfigured down the road.
 
-What's more, relying on well-known and easy-to-deploy _CloudEvents_, typically
-over _HTTP_, makes testing simple and straightforward. Developers don't need
-complex development environments because the _Event Mesh_ integration can be
-easily tested with regular _REST_ send or receive tests that most developers
-are familiar with.
+What's more, relying on well-known and easy-to-deploy _CloudEvents_, typically over _HTTP_, makes testing simple and straightforward.
+Developers don't need complex development environments because the _Event Mesh_ integration can be easily tested with regular _REST_ send or receive tests that most developers are familiar with.

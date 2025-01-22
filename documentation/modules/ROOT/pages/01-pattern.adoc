@@ -1,32 +1,28 @@
 == The story behind this solution pattern
 
-Cabs is a fictional transportation company. Engineers at Cabs were struggling
-with their transactional-style, monolith application. They recently
-started an effort to modernize it.
+Cabs is a fictional transportation company.
+Engineers at Cabs were struggling with their transactional-style, monolith application.
+They recently started an effort to modernize it.
 
 The team saw a https://www.youtube.com/watch?v=Rc5IO6S6ZOk[talk on _Event Mesh_].
-The talk presented the advantages of moving beyond transactional architectures
-in favor of eventual consistency. By leveraging event meshes with technologies
-like Knative, developers can achieve decoupled, reliable microservices without
-extensive re-engineering. This solution addresses inefficiencies and aligns
-distributed systems with real-world business processes. The team had figured
-out they could leverage the _CQRS_ pattern together with _Knative's Event Mesh_
+The talk presented the advantages of moving beyond transactional architectures in favor of eventual consistency.
+By leveraging event meshes with technologies like Knative, developers can achieve decoupled, reliable microservices without extensive re-engineering.
+This solution addresses inefficiencies and aligns distributed systems with real-world business processes.
+The team had figured out they could leverage the _CQRS_ pattern together with _Knative's Event Mesh_
 to modernize their application in a non-extrusive way.
 
 == The Solution
 
-The core of this solution is an event mesh—a dynamic, flexible layer that
-routes, retries, and processes asynchronous events across distributed 
-components. Using _Knative Eventing_ and _CloudEvents_, this pattern enables:
+The core of this solution is an event mesh—a dynamic, flexible layer that routes, retries, and processes asynchronous events across distributed components.
+Using _Knative Eventing_ and _CloudEvents_, this pattern enables:
 
- - *Reliable delivery* of events with retry mechanisms.
- - Simplified *asynchronous workflows*.
- - *Decoupling* of services to improve scalability, testability and resilience.
+- *Reliable delivery* of events with retry mechanisms.
+- Simplified *asynchronous workflows*.
+- *Decoupling* of services to improve scalability, testability and resilience.
 
-The approach of Cabs engineering team is to extract well-defined services, using
-the _CQRS_ pattern to  identify _Commands_ from _Queries_, and model the 
-_Commands_ as _Events_. Those events will be routed to the _Event Mesh_ with 
-regular _HTTP_ messages. The _CloudEvents_ library ensures the proper 
-serialization of the events to and from the _HTTP_ messages. The _Event Mesh_
-will  handle not only the persistence of the events in-flight, but also all the
-required logic of retry in case of endpoint failure.
+The approach of Cabs engineering team is to extract well-defined services, using the _CQRS_ pattern to identify _Commands_ from _Queries_, and model the
+_Commands_ as _Events_.
+Those events will be routed to the _Event Mesh_ with regular _HTTP_ messages.
+The _CloudEvents_ library ensures the proper serialization of the events to and from the _HTTP_ messages.
+The _Event Mesh_
+will handle not only the persistence of the events in-flight, but also all the required logic of retry in case of endpoint failure.

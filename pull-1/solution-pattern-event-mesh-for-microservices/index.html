@@ -250,18 +250,16 @@ using a common <strong>developer toolkit</strong>.</p>
 <h2 id="_the_story_behind_this_solution_pattern"><a class="anchor" href="#_the_story_behind_this_solution_pattern"></a><a class="link" href="#_the_story_behind_this_solution_pattern">2. The story behind this solution pattern</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Cabs is a fictional transportation company. Engineers at Cabs were struggling
-with their transactional-style, monolith application. They recently
-started an effort to modernize it.</p>
+<p>Cabs is a fictional transportation company.
+Engineers at Cabs were struggling with their transactional-style, monolith application.
+They recently started an effort to modernize it.</p>
 </div>
 <div class="paragraph">
 <p>The team saw a <a href="https://www.youtube.com/watch?v=Rc5IO6S6ZOk">talk on <em>Event Mesh</em></a>.
-The talk presented the advantages of moving beyond transactional architectures
-in favor of eventual consistency. By leveraging event meshes with technologies
-like Knative, developers can achieve decoupled, reliable microservices without
-extensive re-engineering. This solution addresses inefficiencies and aligns
-distributed systems with real-world business processes. The team had figured
-out they could leverage the <em>CQRS</em> pattern together with <em>Knative&#8217;s Event Mesh</em>
+The talk presented the advantages of moving beyond transactional architectures in favor of eventual consistency.
+By leveraging event meshes with technologies like Knative, developers can achieve decoupled, reliable microservices without extensive re-engineering.
+This solution addresses inefficiencies and aligns distributed systems with real-world business processes.
+The team had figured out they could leverage the <em>CQRS</em> pattern together with <em>Knative&#8217;s Event Mesh</em>
 to modernize their application in a non-extrusive way.</p>
 </div>
 </div>
@@ -270,9 +268,8 @@ to modernize their application in a non-extrusive way.</p>
 <h2 id="_the_solution"><a class="anchor" href="#_the_solution"></a><a class="link" href="#_the_solution">3. The Solution</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The core of this solution is an event mesh—a dynamic, flexible layer that
-routes, retries, and processes asynchronous events across distributed
-components. Using <em>Knative Eventing</em> and <em>CloudEvents</em>, this pattern enables:</p>
+<p>The core of this solution is an event mesh—a dynamic, flexible layer that routes, retries, and processes asynchronous events across distributed components.
+Using <em>Knative Eventing</em> and <em>CloudEvents</em>, this pattern enables:</p>
 </div>
 <div class="ulist">
 <ul>
@@ -288,13 +285,12 @@ components. Using <em>Knative Eventing</em> and <em>CloudEvents</em>, this patte
 </ul>
 </div>
 <div class="paragraph">
-<p>The approach of Cabs engineering team is to extract well-defined services, using
-the <em>CQRS</em> pattern to  identify <em>Commands</em> from <em>Queries</em>, and model the
-<em>Commands</em> as <em>Events</em>. Those events will be routed to the <em>Event Mesh</em> with
-regular <em>HTTP</em> messages. The <em>CloudEvents</em> library ensures the proper
-serialization of the events to and from the <em>HTTP</em> messages. The <em>Event Mesh</em>
-will  handle not only the persistence of the events in-flight, but also all the
-required logic of retry in case of endpoint failure.</p>
+<p>The approach of Cabs engineering team is to extract well-defined services, using the <em>CQRS</em> pattern to identify <em>Commands</em> from <em>Queries</em>, and model the
+<em>Commands</em> as <em>Events</em>.
+Those events will be routed to the <em>Event Mesh</em> with regular <em>HTTP</em> messages.
+The <em>CloudEvents</em> library ensures the proper serialization of the events to and from the <em>HTTP</em> messages.
+The <em>Event Mesh</em>
+will handle not only the persistence of the events in-flight, but also all the required logic of retry in case of endpoint failure.</p>
 </div>
 </div>
 </div>

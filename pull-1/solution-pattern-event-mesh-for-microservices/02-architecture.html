@@ -420,26 +420,56 @@ The uptime can&#8217;t be raised to 100%, though, so <em>Service Mesh</em> still
 </colgroup>
 <thead>
 <tr>
-<th class="tableblock halign-center valign-top"></th>
-<th class="tableblock halign-center valign-top">Service Mesh</th>
-<th class="tableblock halign-center valign-top">Event Mesh</th>
+<th class="tableblock halign-left valign-middle"></th>
+<th class="tableblock halign-left valign-middle">Service Mesh</th>
+<th class="tableblock halign-left valign-middle">Event Mesh</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock"><strong>Similarities</strong></p></td>
-<td class="tableblock halign-center valign-top" colspan="2"><p class="tableblock">* Flexibility
-* Robustness
-* Decoupling</p></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock"><strong>Similarities</strong></p></td>
+<td class="tableblock halign-left valign-middle" colspan="2"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Flexibility</p>
+</li>
+<li>
+<p>Robustness</p>
+</li>
+<li>
+<p>Decoupling</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 <tr>
-<td class="tableblock halign-center valign-top"><p class="tableblock"><strong>Differences</strong></p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">* Synchronous
-* Request and Response
-* Better for queries</p></td>
-<td class="tableblock halign-center valign-top"><p class="tableblock">* Asynchronous
-* Events
-* Better for commands</p></td>
+<td class="tableblock halign-left valign-middle"><p class="tableblock"><strong>Differences</strong></p></td>
+<td class="tableblock halign-left valign-middle"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Synchronous</p>
+</li>
+<li>
+<p>Request and response</p>
+</li>
+<li>
+<p>Better for queries</p>
+</li>
+</ul>
+</div></div></td>
+<td class="tableblock halign-left valign-middle"><div class="content"><div class="ulist">
+<ul>
+<li>
+<p>Asynchronous</p>
+</li>
+<li>
+<p>Events</p>
+</li>
+<li>
+<p>Better for commands</p>
+</li>
+</ul>
+</div></div></td>
 </tr>
 </tbody>
 </table>
@@ -466,10 +496,10 @@ For instance:</p>
 </div>
 </div>
 <div class="sect2">
-<h3 id="_improving_resilience_in_traditional_applications"><a class="anchor" href="#_improving_resilience_in_traditional_applications"></a><a class="link" href="#_improving_resilience_in_traditional_applications">2.8. Improving Resilience in Traditional Applications</a></h3>
+<h3 id="_improving_resilience_in_applications"><a class="anchor" href="#_improving_resilience_in_applications"></a><a class="link" href="#_improving_resilience_in_applications">2.8. Improving Resilience in Applications</a></h3>
 <div class="paragraph">
 <p>Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
-Replacing these with asynchronous event-driven communication reduces dependencies.</p>
+Replacing these with asynchronous event-driven communication reduces dependencies and makes the system <em>Eventually Consistent</em>.</p>
 </div>
 <div class="paragraph">
 <p>For example, invoicing and notification services in an e-commerce platform can process events independently, ensuring that downtime in one service does not block the entire workflow.</p>

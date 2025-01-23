@@ -7,6 +7,7 @@
 
 The architecture of an event mesh-enabled system is a paradigm shift from traditional transactional designs to an eventual consistency model.
 This design aligns better with real-world processes, where different parts of a system may operate asynchronously yet collaboratively.
+
 In this section, we explore the technologies, flow, and structure that make the event mesh architecture resilient, scalable, and developer-friendly.
 
 [#tech_stack]
@@ -94,7 +95,7 @@ It will eventually settle correctly in all downstream systems.
 4. The endpoints receive the events and process them, updating their internal states and potentially emitting new events for downstream consumers.
 The potential events are transmitted to the _Event Mesh_.
 5. The dispatch loop continues until the event queue is empty and all the events are processed successfully.
-The failures are being automatically retried by the _Event Mesh_ using exponential backoff algorithm.
+The failures are being automatically retried by the _Event Mesh_ using exponential backoff algorithm by default.
 
 image::https://www.plantuml.com/plantuml/svg/XPBHhjGW48RlUOgnzzi7wCNcsDGOeySOZG_0qkcMB8NA33MDyTsbb6CNNUCT_FF_tv0PdeYbvp0PyOf7d10coUYrFBd0HbiKTDDsbbvEi5rvdH5cPzPK4yguq4FrPa7By8mqLl1302WtpSvkMlNUIjOBGklT3Nq5al8nshu531WjShZ9L4adyLE8mPaUFLJFMda7X7xH2kalUESZsXDysGs9aRKiHNylMLuauM7lsdjdrvRGTtPnMcbxBR2xYe-mHo23i_TFy4V7Uj1AidQsODyNihuDuIxw0QzIhK0hCKxb68xgwtbEkFrQF34xkbt8Wsgt9hbowjrtUphdtJJmALoCfX5msoozk6glhoFNvvY51hxEiG6cBcBF7OQqIOWSzAI9NpZbSg0sE73zpwuPUehlAeCDV7Q1yO4lZ_w_ldBafVdnK-lpyM4QU8jCeEtWG5vY2lgz98h-ANNyXjyJomfuLCxt99xGzc4olm00[width=100%]
 
@@ -137,7 +138,7 @@ InvoiceService ..> InvoiceDB: Update Invoice records
 
 The diagram illustrates the example flow of events between the applications, the Knative _Event Mesh_, and the datastores which persist settled state of the system.
 
-[NOTE]
+[TIP]
 ====
 Notice the applications aren't pulling the events from the queue.
 In fact they aren't aware of any.
@@ -145,6 +146,14 @@ The _Event Mesh_ is the one controlling the flow, and retrying when needed.
 
 There are *no additional* libraries needed to consume events from _Event Mesh_.
 The _Event Mesh_ pushes the events as _CloudEvents_ encoded as _REST_ messages.
+====
+
+[NOTE]
+====
+The exponential backoff algorithm used by _Event Mesh_ is configurable.
+It uses the following formula to calculate the backoff period: `+backoffDelay * 2^<numberOfRetries>+`, where the backoff delay is a base number of seconds, and number of retries is automatically tracked by the _Event Mesh_.
+
+A dead letter sink can also be configured to send events in case they exceed the maximum retry number, which is also configurable. 
 ====
 
 === _Work Ledger_ analogy
@@ -225,7 +234,7 @@ For instance:
 Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
 Replacing these with asynchronous event-driven communication reduces dependencies and makes the system _Eventually Consistent_.
 
-For example, invoicing and notification services in an e-commerce platform can process events independently, ensuring that downtime in one service does not block the entire workflow.
+For example, invoicing and notification services in a ride-sharing platform can process events independently, ensuring that downtime in one service does not block the entire workflow.
 
 Retry mechanisms provided by the _Event Mesh_ guarantee that transient failures are handled gracefully without data loss.
 
@@ -237,10 +246,10 @@ The applications publish and consume events, usually via
 _HTTP REST_, and the only thing that is required is the _CloudEvents_ format.
 
 The _CloudEvents_ format provides a common envelope for events with metadata that every event needs, such as identifier, type, timestamps, or source information.
-The format is a CNCF standard supported by a number of projects and doesn't enforce the use of any library.
+The format is a _CNCF_ standard supported by a number of projects and doesn't enforce the use of any library.
 
 This makes the investment in _Knative's Event Mesh_ safe in terms of vendor lock-in.
 Architects can be assured that their options remain open and that solutions can be easily reconfigured down the road.
 
 What's more, relying on well-known and easy-to-deploy _CloudEvents_, typically over _HTTP_, makes testing simple and straightforward.
-Developers don't need complex development environments because the _Event Mesh_ integration can be easily tested with regular _REST_ send or receive tests that most developers are familiar with.
+Developers don't need complex development environments because the _Event Mesh_ integration can be easily tested with regular _REST_ testing that most developers are familiar with.

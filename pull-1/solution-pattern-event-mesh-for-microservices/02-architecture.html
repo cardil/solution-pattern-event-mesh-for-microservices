@@ -186,9 +186,13 @@
 <h1 id="_architecture" class="sect0"><a class="anchor" href="#_architecture"></a><a class="link" href="#_architecture">Architecture</a></h1>
 <div class="openblock partintro">
 <div class="content">
-The architecture of an event mesh-enabled system is a paradigm shift from traditional transactional designs to an eventual consistency model.
-This design aligns better with real-world processes, where different parts of a system may operate asynchronously yet collaboratively.
-In this section, we explore the technologies, flow, and structure that make the event mesh architecture resilient, scalable, and developer-friendly.
+<div class="paragraph">
+<p>The architecture of an event mesh-enabled system is a paradigm shift from traditional transactional designs to an eventual consistency model.
+This design aligns better with real-world processes, where different parts of a system may operate asynchronously yet collaboratively.</p>
+</div>
+<div class="paragraph">
+<p>In this section, we explore the technologies, flow, and structure that make the event mesh architecture resilient, scalable, and developer-friendly.</p>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -336,7 +340,7 @@ The potential events are transmitted to the <em>Event Mesh</em>.</p>
 </li>
 <li>
 <p>The dispatch loop continues until the event queue is empty and all the events are processed successfully.
-The failures are being automatically retried by the <em>Event Mesh</em> using exponential backoff algorithm.</p>
+The failures are being automatically retried by the <em>Event Mesh</em> using exponential backoff algorithm by default.</p>
 </li>
 </ol>
 </div>
@@ -348,11 +352,11 @@ The failures are being automatically retried by the <em>Event Mesh</em> using ex
 <div class="paragraph">
 <p>The diagram illustrates the example flow of events between the applications, the Knative <em>Event Mesh</em>, and the datastores which persist settled state of the system.</p>
 </div>
-<div class="admonitionblock note">
+<div class="admonitionblock tip">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-note" title="Note"></i>
+<i class="fa icon-tip" title="Tip"></i>
 </td>
 <td class="content">
 <div class="paragraph">
@@ -363,6 +367,24 @@ The <em>Event Mesh</em> is the one controlling the flow, and retrying when neede
 <div class="paragraph">
 <p>There are <strong>no additional</strong> libraries needed to consume events from <em>Event Mesh</em>.
 The <em>Event Mesh</em> pushes the events as <em>CloudEvents</em> encoded as <em>REST</em> messages.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>The exponential backoff algorithm used by <em>Event Mesh</em> is configurable.
+It uses the following formula to calculate the backoff period: <code>backoffDelay * 2^&lt;numberOfRetries&gt;</code>, where the backoff delay is a base number of seconds, and number of retries is automatically tracked by the <em>Event Mesh</em>.</p>
+</div>
+<div class="paragraph">
+<p>A dead letter sink can also be configured to send events in case they exceed the maximum retry number, which is also configurable.</p>
 </div>
 </td>
 </tr>
@@ -502,7 +524,7 @@ For instance:</p>
 Replacing these with asynchronous event-driven communication reduces dependencies and makes the system <em>Eventually Consistent</em>.</p>
 </div>
 <div class="paragraph">
-<p>For example, invoicing and notification services in an e-commerce platform can process events independently, ensuring that downtime in one service does not block the entire workflow.</p>
+<p>For example, invoicing and notification services in a ride-sharing platform can process events independently, ensuring that downtime in one service does not block the entire workflow.</p>
 </div>
 <div class="paragraph">
 <p>Retry mechanisms provided by the <em>Event Mesh</em> guarantee that transient failures are handled gracefully without data loss.</p>
@@ -520,7 +542,7 @@ The applications publish and consume events, usually via
 </div>
 <div class="paragraph">
 <p>The <em>CloudEvents</em> format provides a common envelope for events with metadata that every event needs, such as identifier, type, timestamps, or source information.
-The format is a CNCF standard supported by a number of projects and doesn&#8217;t enforce the use of any library.</p>
+The format is a <em>CNCF</em> standard supported by a number of projects and doesn&#8217;t enforce the use of any library.</p>
 </div>
 <div class="paragraph">
 <p>This makes the investment in <em>Knative&#8217;s Event Mesh</em> safe in terms of vendor lock-in.
@@ -528,7 +550,7 @@ Architects can be assured that their options remain open and that solutions can 
 </div>
 <div class="paragraph">
 <p>What&#8217;s more, relying on well-known and easy-to-deploy <em>CloudEvents</em>, typically over <em>HTTP</em>, makes testing simple and straightforward.
-Developers don&#8217;t need complex development environments because the <em>Event Mesh</em> integration can be easily tested with regular <em>REST</em> send or receive tests that most developers are familiar with.</p>
+Developers don&#8217;t need complex development environments because the <em>Event Mesh</em> integration can be easily tested with regular <em>REST</em> testing that most developers are familiar with.</p>
 </div>
 </div>
 </div>

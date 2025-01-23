@@ -181,26 +181,27 @@ The uptime can't be raised to 100%, though, so _Service Mesh_ still can lose the
 
 The table below captures the key differences:
 
-[cols="^1,^2,^2"]
+[cols=".^1,.^2,.^2"]
 |===
 || Service Mesh | Event Mesh
 
 |
 *Similarities*
 
-2+|
+2+a|
+
 * Flexibility
 * Robustness
 * Decoupling
 
 |
 *Differences*
-|
+a|
 * Synchronous
-* Request and Response
+* Request and response
 * Better for queries
 
-|
+a|
 * Asynchronous
 * Events
 * Better for commands
@@ -219,10 +220,10 @@ For instance:
 
 * This approach decouples old systems from rigid workflows, allowing for gradual modernization while ensuring operational continuity.
 
-=== Improving Resilience in Traditional Applications
+=== Improving Resilience in Applications
 
 Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
-Replacing these with asynchronous event-driven communication reduces dependencies.
+Replacing these with asynchronous event-driven communication reduces dependencies and makes the system _Eventually Consistent_.
 
 For example, invoicing and notification services in an e-commerce platform can process events independently, ensuring that downtime in one service does not block the entire workflow.
 

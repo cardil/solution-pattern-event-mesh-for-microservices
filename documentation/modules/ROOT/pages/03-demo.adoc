@@ -1,4 +1,4 @@
-= Solution Pattern: Name Template
+= Building Apps around the Event Mesh
 :sectnums:
 :sectlinks:
 :doctype: book
@@ -6,6 +6,59 @@
 = See the Solution in Action
 
 == Demonstration
+
+Let's take a look at the example.
+We'll be looking at a Cabs ride-sharing application, that mimics real-world solutions of similar kind.
+The application is written in a popular Java framework.
+
+=== Initial application
+
+Here's a method from the Cabs application that handles the completion of transit:
+
+[WARNING]
+====
+The following example should be considered an anti-example!
+====
+
+[source,java]
+----
+@Transactional // <1>
+public void completeTransit(Long driverId, UUID requestUUID, Address destinationAddress) {
+    destinationAddress = addressRepository.save(destinationAddress); // <2>
+    TransitDetailsDTO transitDetails = transitDetailsFacade.find(requestUUID);
+    if (!driverService.exists(driverId)) {
+        throw new IllegalArgumentException("Driver does not exist, id = " + driverId);
+    }
+    Address from = addressRepository.getByHash(transitDetails.from.getHash());
+    Address to = addressRepository.getByHash(destinationAddress.getHash());
+    Money finalPrice = completeTransitService.completeTransit(
+      driverId, requestUUID, from, to); // <2>
+    Money driverFee = driverFeeService.calculateDriverFee(
+      finalPrice, driverId);
+    driverService.markNotOccupied(driverId); // <2>
+    transitDetailsFacade.transitCompleted(requestUUID,
+      Instant.now(clock), finalPrice, driverFee); // <2>
+    awardsService.registerMiles(transitDetails.client.getId(),
+      transitDetails.transitId); // <2>
+    invoiceGenerator.generate(finalPrice.toInt(),
+      transitDetails.client.getName() + " " +
+      transitDetails.client.getLastName()); // <2>
+    eventsPublisher.publish(new TransitCompleted(
+      transitDetails.client.getId(), transitDetails.transitId,
+      transitDetails.from.getHash(), destinationAddress.getHash(),
+      transitDetails.started, Instant.now(clock), Instant.now(clock))
+    ); // <2>
+}
+----
+
+There are a number of problems with that method:
+
+<1> It uses the `+@Transational+` annotation, and modify number of data stores.
+This means that when one of those operations fails, the whole processing will be rolled back.
+In effect, the end-user will receive a nasty error message.
+<2> It merges different, business domains.
+This makes it hard to understand and maintain.
+It isn't required to all of those operations complete at the same time.
 
 Include here content related to potential existing demos: blogs, articles, recorded videos, walkthrough guides, tutorials.
 
@@ -41,26 +94,27 @@ deactivate Legacy
 
 The diagram illustrates the flow of events between the legacy application, the Knative _Event Mesh_, the fee calculator service, and the datastore.
 
-[#demo-video]
-=== Watch a demonstration
-
 In this video you can see xpto:
 
-video::3yULVMdqJ98[youtube, width=800, height=480]
+video::Rc5IO6S6ZOk[youtube,width=800,height=480]
 
 Next, you can learn how to walkthrough this demo.
 
 == Run the demonstration
 
 === Before getting started
-To run this demo, you will need xpto. Adding to that, make sure to have:
+
+To run this demo, you will need xpto.
+Adding to that, make sure to have:
 
 * ABC
 * XYZ
 * XPTO
 
 === Installing the demo
+
 Installation guide and basic test of the demo installation if needed
 
 === Walkthrough guide
+
 How to run through the demo

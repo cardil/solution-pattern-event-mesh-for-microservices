@@ -176,28 +176,28 @@
 <h2 id="_demonstration"><a class="anchor" href="#_demonstration"></a><a class="link" href="#_demonstration">1. Demonstration</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Let&#8217;s take a look at the example.
+<p>Let&#8217;s take a look at the following example.
 We&#8217;ll be looking at a Cabs ride-sharing application, that mimics real-world solutions of similar kind.
 The application is written in a popular Java framework.</p>
 </div>
 <div class="sect2">
 <h3 id="_initial_application"><a class="anchor" href="#_initial_application"></a><a class="link" href="#_initial_application">1.1. Initial application</a></h3>
-<div class="paragraph">
-<p>Here&#8217;s a method from the Cabs application that handles the completion of transit:</p>
-</div>
-<div class="admonitionblock warning">
+<div class="admonitionblock important">
 <table>
 <tr>
 <td class="icon">
-<i class="fa icon-warning" title="Warning"></i>
+<i class="fa icon-important" title="Important"></i>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The following example should be considered an anti-example!</p>
+<p>The following example should be considered as suboptimal, most likely a counterexample!</p>
 </div>
 </td>
 </tr>
 </table>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s a method from the Cabs application that handles the completion of a ride.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -230,27 +230,84 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 }</code></pre>
 </div>
 </div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
 <div class="paragraph">
-<p>There are a number of problems with that method:</p>
+<p>There are issues with the above method.</p>
 </div>
 <div class="colist arabic">
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>It uses the <code>@Transational</code> annotation, and modify number of data stores.
-This means that when one of those operations fails, the whole processing will be rolled back.
-In effect, the end-user will receive a nasty error message.</td>
+<td>It uses the <code>@Transational</code> annotation, and modify number of unrelated data stores.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>It merges different, business domains.
-This makes it hard to understand and maintain.
-It isn&#8217;t required to all of those operations complete at the same time.</td>
+<td>It merges different, business domains.</td>
+</tr>
+</table>
+</div>
+</td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>Include here content related to potential existing demos: blogs, articles, recorded videos, walkthrough guides, tutorials.</p>
+<p>Similar methods are, unfortunately, quite common in business applications.
+At first glance, many developers don&#8217;t see any problems with similar code.
+Let&#8217;s break down the problems in detail.</p>
+</div>
+<div class="sect3">
+<h4 id="_overuse_of_transactional_processing"><a class="anchor" href="#_overuse_of_transactional_processing"></a><a class="link" href="#_overuse_of_transactional_processing">1.1.1. Overuse of transactional processing</a></h4>
+<div class="paragraph">
+<p>The transactional processing has been the cornerstone of many business applications.
+However, in most cases, the transactional processing isn&#8217;t the best fit for real-world processes.</p>
+</div>
+<div class="paragraph">
+<p>In our example, when the ride finishes, that&#8217;s a real-world situation.
+However, the example uses the <code>@Transational</code> annotation, and operate on number of unrelated data.
+This means that when one of those operations fails, the whole processing will be rolled back.
+In effect, the end-user will receive a nasty error message.</p>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Outages from the dependant services must not invalidate the main intent.
+In fact, all the operations in this example could happen independently, and at different, yet reasonable times.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_bundling_of_different_logical_domains"><a class="anchor" href="#_bundling_of_different_logical_domains"></a><a class="link" href="#_bundling_of_different_logical_domains">1.1.2. Bundling of different logical domains</a></h4>
+<div class="paragraph">
+<p>Our example is also very chatty, and hard to understand at first glance.
+In fact, this is quite common in similar applications.
+The code starts small, easy to understand.
+When new features are added, it keeps growing as developers cramp new instructions into methods like <code>completeTransit</code>.</p>
+</div>
+<div class="paragraph">
+<p>Of course, the developers could re-architect the code, to extract instructions to a separate blocks, but that is just a half-measure.
+Still, the application will do all the operations, starting from <code>completeTransit</code> method in the same time, and withing the same <em>"script"</em>.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_refactoring"><a class="anchor" href="#_refactoring"></a><a class="link" href="#_refactoring">1.2. Refactoring</a></h3>
+<div class="paragraph">
+<p>In this section, we&#8217;ll refactor the Cabs application.
+The refactoring will be limited to make the process easy to understand.</p>
 </div>
 <div class="imageblock">
 <div class="content">

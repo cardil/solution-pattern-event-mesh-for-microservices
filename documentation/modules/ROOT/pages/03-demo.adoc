@@ -7,18 +7,18 @@
 
 == Demonstration
 
-Let's take a look at the example.
+Let's take a look at the following example.
 We'll be looking at a Cabs ride-sharing application, that mimics real-world solutions of similar kind.
 The application is written in a popular Java framework.
 
 === Initial application
 
-Here's a method from the Cabs application that handles the completion of transit:
+[IMPORTANT]
+====
+The following example should be considered as suboptimal, most likely a counterexample!
+====
 
-[WARNING]
-====
-The following example should be considered an anti-example!
-====
+Here's a method from the Cabs application that handles the completion of a ride.
 
 [source,java]
 ----
@@ -51,16 +51,53 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 }
 ----
 
-There are a number of problems with that method:
+[CAUTION]
+====
+There are issues with the above method.
 
-<1> It uses the `+@Transational+` annotation, and modify number of data stores.
+<1> It uses the `+@Transational+` annotation, and modify number of unrelated data stores.
+// This means that when one of those operations fails, the whole processing will be rolled back.
+// In effect, the end-user will receive a nasty error message.
+
+<2> It merges different, business domains.
+// This makes it hard to understand and maintain.
+// It isn't required to all of those operations complete at the same time.
+====
+
+Similar methods are, unfortunately, quite common in business applications.
+At first glance, many developers don't see any problems with similar code.
+Let's break down the problems in detail.
+
+==== Overuse of transactional processing
+
+The transactional processing has been the cornerstone of many business applications.
+However, in most cases, the transactional processing isn't the best fit for real-world processes.
+
+In our example, when the ride finishes, that's a real-world situation.
+However, the example uses the `+@Transational+` annotation, and operate on number of unrelated data.
 This means that when one of those operations fails, the whole processing will be rolled back.
 In effect, the end-user will receive a nasty error message.
-<2> It merges different, business domains.
-This makes it hard to understand and maintain.
-It isn't required to all of those operations complete at the same time.
 
-Include here content related to potential existing demos: blogs, articles, recorded videos, walkthrough guides, tutorials.
+[NOTE]
+====
+Outages from the dependant services must not invalidate the main intent.
+In fact, all the operations in this example could happen independently, and at different, yet reasonable times.
+====
+
+==== Bundling of different logical domains
+
+Our example is also very chatty, and hard to understand at first glance.
+In fact, this is quite common in similar applications.
+The code starts small, easy to understand.
+When new features are added, it keeps growing as developers cramp new instructions into methods like `+completeTransit+`.
+
+Of course, the developers could re-architect the code, to extract instructions to a separate blocks, but that is just a half-measure.
+Still, the application will do all the operations, starting from `+completeTransit+` method in the same time, and withing the same _"script"_.
+
+=== Refactoring
+
+In this section, we'll refactor the Cabs application.
+The refactoring will be limited to make the process easy to understand.
 
 image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
 

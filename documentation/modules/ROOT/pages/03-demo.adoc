@@ -56,12 +56,7 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 There are issues with the above method.
 
 <1> It uses the `+@Transational+` annotation, and modify number of unrelated data stores.
-// This means that when one of those operations fails, the whole processing will be rolled back.
-// In effect, the end-user will receive a nasty error message.
-
 <2> It merges different, business domains.
-// This makes it hard to understand and maintain.
-// It isn't required to all of those operations complete at the same time.
 ====
 
 Similar methods are, unfortunately, quite common in business applications.
@@ -98,6 +93,158 @@ Still, the application will do all the operations, starting from `+completeTrans
 
 In this section, we'll refactor the Cabs application.
 The refactoring will be limited to make the process easy to understand.
+The scope of the refactoring will be the extraction of drivers module, which is already a separate domain in the codebase.
+Within the scope of the `+completeTransit+` method, we'll need to shift the way we calculate the fee for the driver.
+The calculation will be done asynchronously, and when the driver module publishes the calculation result, it will be saved back into the database.
+
+The base for the refactoring is the _Event Mesh_ pattern, and the asynchronous communication will be done with _Cloud Events_.
+
+==== Drivers module
+
+The functionality around drivers is already quite separated in the codebase, so it is a good staring point to extract into a separate module.
+The drivers module will become a standalone web service, deployed on the _Kubernetes_ cluster.
+The implementation of the drivers module will be done with _Rust_ for this example.
+
+Here's the _Rust_ code for calculate fee functionality.
+The entrypoint is the _Cloud Event_ of type `cabs.drivers.calculate-fee` we are expecting the _Event Mesh_ will route.
+
+[source,rust]
+----
+impl Service {
+  pub async fn calculate_fee(&mut self, ce: Event) -> Result<()> {
+    let fee_event = Self::parse_fee_event(ce)?; // <1>
+    let subject = fee_event.id.clone();
+
+    let drv = self.repo.get(&fee_event.entity.driver_id).await?;
+
+    let fee = drv.calculate_fee(&fee_event.entity.transit_price); // <2>
+
+    let fee_event = DriverFeeEvent {
+        driver_id: fee_event.entity.driver_id,
+        fee,
+    }; // <3>
+
+    let mut builder = fee_event.to_builder(); // <3>
+    if let Some(id) = subject {
+        builder = builder.subject(id);
+    } // <3>
+    let ce = builder.build().map_err(error::ErrorInternalServerError)?; // <3>
+
+    Sender::new(&self.config).send(ce).await?; // <4>
+
+    Ok(())
+  }
+  // [..]
+}
+----
+
+In the above code, we are doing the following:
+
+<1> We are parsing the internal, business logic, fee event from the _Cloud Events_ envelope.
+<2> We are calculating the fee for this event, using some business logic.
+<3> We are wrapping the calculated fee into the _Cloud Events_ envelope.
+<4> We are sending the fee back to the _Event Mesh_ using _HTTP REST_ client.
+
+Of course, in order for this method to be called, we need to route the event from the HTTP listener:
+
+[source,rust]
+----
+pub fn routes() -> impl HttpServiceFactory + 'static {
+    web::resource("/").route(web::post().to(recv))
+}
+
+async fn recv(
+    ce: Event,
+    state: web::Data<State>,
+    binding: web::Data<Binding>,
+) -> Result<HttpResponse> {
+    log::info!("Received event:\n{}", ce);
+
+    let mut svc = service::new(state, binding).await?;
+
+    match ce.ty() {
+        "cabs.drivers.calculate-fee" => svc.calculate_fee(ce).await,
+        _ => Err(error::ErrorBadRequest("unsupported event type")),
+    }?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+----
+
+Let's see also the _Cloud Event_ sender, that uses the _HTTP REST_ client to send events to the _Event Mesh_:
+
+[source,rust]
+----
+impl Sender {
+    pub async fn send(&self, ce: Event) -> Result<()> {
+        log::debug!("sending {} event to {}:\n{:?}", ce.ty(), &self.sink, ce,);
+
+        let response = self
+            .client
+            .post(&self.sink) // <1>
+            .event(ce)
+            .map_err(error::ErrorInternalServerError)?
+            .send()
+            .await
+            .map_err(error::ErrorInternalServerError)?;
+
+        match response.status().is_success() {
+            true => Ok(()),
+            false => {
+                log::error!("failed to send event: {:#?}", response);
+                Err(error::ErrorInternalServerError(format!(
+                    "failed to send event: {}",
+                    response.status()
+                )))
+            }
+        }
+    }
+}
+----
+
+[NOTE]
+====
+<1> The client uses _POST_ method, to send the _JSON_ representation of the event to the sink.
+The _sink_ is the URL of the target, in this case the url of the _Event Mesh_.
+====
+
+==== Event Mesh
+
+In this section, we'll use the _Event Mesh_ setup to communication between the different parts of refactored code.
+
+Here's the _Event Mesh_ central component configuration, the _Broker_, which will be used in this example.
+The _Broker_ here is the _Knative_ component, and will be deployed in the _Kubernetes_ cluster.
+
+[source,yaml]
+----
+apiVersion: eventing.knative.dev/v1
+kind: Broker
+metadata:
+  name: default
+  namespace: demo
+spec:
+  delivery:
+    backoffDelay: PT0.2S # <1>
+    backoffPolicy: exponential # <2>
+    retry: 10 # <3>
+----
+
+<1> The `backoffDelay` is the delay between retries, and us use `+200ms+` initially.
+<2> The `backoffPolicy` is set to `exponential`, which means that the delay will be doubled each time.
+<3> The `retry` is the number of times we retry before giving up.
+
+[IMPORTANT]
+====
+Because the policy is `exponential`, the maximum time the _Broker_ will be retrying is 6 min and 49 sec.
+In the above configuration, after that time is reached, the event will be dropped.
+====
+
+[NOTE]
+====
+A `+deadLetterSink+` could be configured for the _Broker_ to send the events that failed to be delivered in time to a back-up location.
+Events captured in a back-up location can be re-transmitted into the _Event Mesh_ later.
+====
+
 
 image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
 
@@ -131,7 +278,7 @@ deactivate Legacy
 
 The diagram illustrates the flow of events between the legacy application, the Knative _Event Mesh_, the fee calculator service, and the datastore.
 
-In this video you can see xpto:
+In this video you can see the above example presented by Red Hat' employee https://github.com/cardil[Chris Suszynski]:
 
 video::Rc5IO6S6ZOk[youtube,width=800,height=480]
 
@@ -141,17 +288,12 @@ Next, you can learn how to walkthrough this demo.
 
 === Before getting started
 
-To run this demo, you will need xpto.
-Adding to that, make sure to have:
-
-* ABC
-* XYZ
-* XPTO
+// TODO: Add instructions how to run
 
 === Installing the demo
 
-Installation guide and basic test of the demo installation if needed
+// TODO: Installation guide and basic test of the demo installation if needed
 
 === Walkthrough guide
 
-How to run through the demo
+// TODO: How to run through the demo

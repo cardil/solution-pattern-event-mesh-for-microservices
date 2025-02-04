@@ -1,4 +1,4 @@
-= Solution Patterns: Template Name
+= Building Apps around the Event Mesh
 :sectnums:
 :sectlinks:
 :doctype: book
@@ -6,6 +6,10 @@
 
 == Developer Resources
 
-* Add link to the git repo of the code
-* Add links to whitepapers, ebooks, learning paths, product pages
-
+* https://github.com/cardil/cabs-usvc[cardil / cabs-usvc] _(The example code used in this solution)_
+* https://youtu.be/Rc5IO6S6ZOk[youtu.be / Rc5IO6S6ZOk] _(The talk that served a base for this solution)_
+* https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
+* https://knative.dev/docs/eventing/event-mesh/[Knative Event Mesh]
+* https://bit.ly/knative-tutorial[Knative Tutorial]
+* https://developers.redhat.com/[Red Hat Developer]
+* https://docs.openshift.com/serverless/[Red Hat OpenShift Serverless Documentation]

@@ -307,7 +307,226 @@ Still, the application will do all the operations, starting from <code>completeT
 <h3 id="_refactoring"><a class="anchor" href="#_refactoring"></a><a class="link" href="#_refactoring">1.2. Refactoring</a></h3>
 <div class="paragraph">
 <p>In this section, we&#8217;ll refactor the Cabs application.
-The refactoring will be limited to make the process easy to understand.</p>
+The refactoring will be limited to make the process easy to understand.
+The scope of the refactoring will be the extraction of drivers module, which is already a separate domain in the codebase.
+Within the scope of the <code>completeTransit</code> method, we&#8217;ll need to shift the way we calculate the fee for the driver.
+The calculation will be done asynchronously, and when the driver module publishes the calculation result, it will be saved back into the database.</p>
+</div>
+<div class="paragraph">
+<p>The base for the refactoring is the <em>Event Mesh</em> pattern, and the asynchronous communication will be done with <em>Cloud Events</em>.</p>
+</div>
+<div class="sect3">
+<h4 id="_drivers_module"><a class="anchor" href="#_drivers_module"></a><a class="link" href="#_drivers_module">1.2.1. Drivers module</a></h4>
+<div class="paragraph">
+<p>The functionality around drivers is already quite separated in the codebase, so it is a good staring point to extract into a separate module.
+The drivers module will become a standalone web service, deployed on the <em>Kubernetes</em> cluster.
+The implementation of the drivers module will be done with <em>Rust</em> for this example.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the <em>Rust</em> code for calculate fee functionality.
+The entrypoint is the <em>Cloud Event</em> of type <code>cabs.drivers.calculate-fee</code> we are expecting the <em>Event Mesh</em> will route.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">impl Service {
+  pub async fn calculate_fee(&amp;mut self, ce: Event) -&gt; Result&lt;()&gt; {
+    let fee_event = Self::parse_fee_event(ce)?; <i class="conum" data-value="1"></i><b>(1)</b>
+    let subject = fee_event.id.clone();
+
+    let drv = self.repo.get(&amp;fee_event.entity.driver_id).await?;
+
+    let fee = drv.calculate_fee(&amp;fee_event.entity.transit_price); <i class="conum" data-value="2"></i><b>(2)</b>
+
+    let fee_event = DriverFeeEvent {
+        driver_id: fee_event.entity.driver_id,
+        fee,
+    }; <i class="conum" data-value="3"></i><b>(3)</b>
+
+    let mut builder = fee_event.to_builder(); <i class="conum" data-value="3"></i><b>(3)</b>
+    if let Some(id) = subject {
+        builder = builder.subject(id);
+    } <i class="conum" data-value="3"></i><b>(3)</b>
+    let ce = builder.build().map_err(error::ErrorInternalServerError)?; <i class="conum" data-value="3"></i><b>(3)</b>
+
+    Sender::new(&amp;self.config).send(ce).await?; <i class="conum" data-value="4"></i><b>(4)</b>
+
+    Ok(())
+  }
+  // [..]
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the above code, we are doing the following:</p>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>We are parsing the internal, business logic, fee event from the <em>Cloud Events</em> envelope.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>We are calculating the fee for this event, using some business logic.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>We are wrapping the calculated fee into the <em>Cloud Events</em> envelope.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="4"></i><b>4</b></td>
+<td>We are sending the fee back to the <em>Event Mesh</em> using <em>HTTP REST</em> client.</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Of course, in order for this method to be called, we need to route the event from the HTTP listener:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">pub fn routes() -&gt; impl HttpServiceFactory + 'static {
+    web::resource("/").route(web::post().to(recv))
+}
+
+async fn recv(
+    ce: Event,
+    state: web::Data&lt;State&gt;,
+    binding: web::Data&lt;Binding&gt;,
+) -&gt; Result&lt;HttpResponse&gt; {
+    log::info!("Received event:\n{}", ce);
+
+    let mut svc = service::new(state, binding).await?;
+
+    match ce.ty() {
+        "cabs.drivers.calculate-fee" =&gt; svc.calculate_fee(ce).await,
+        _ =&gt; Err(error::ErrorBadRequest("unsupported event type")),
+    }?;
+
+    Ok(HttpResponse::Ok().finish())
+}</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s see also the <em>Cloud Event</em> sender, that uses the <em>HTTP REST</em> client to send events to the <em>Event Mesh</em>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">impl Sender {
+    pub async fn send(&amp;self, ce: Event) -&gt; Result&lt;()&gt; {
+        log::debug!("sending {} event to {}:\n{:?}", ce.ty(), &amp;self.sink, ce,);
+
+        let response = self
+            .client
+            .post(&amp;self.sink) <i class="conum" data-value="1"></i><b>(1)</b>
+            .event(ce)
+            .map_err(error::ErrorInternalServerError)?
+            .send()
+            .await
+            .map_err(error::ErrorInternalServerError)?;
+
+        match response.status().is_success() {
+            true =&gt; Ok(()),
+            false =&gt; {
+                log::error!("failed to send event: {:#?}", response);
+                Err(error::ErrorInternalServerError(format!(
+                    "failed to send event: {}",
+                    response.status()
+                )))
+            }
+        }
+    }
+}</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The client uses <em>POST</em> method, to send the <em>JSON</em> representation of the event to the sink.
+The <em>sink</em> is the URL of the target, in this case the url of the <em>Event Mesh</em>.</td>
+</tr>
+</table>
+</div>
+</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_event_mesh"><a class="anchor" href="#_event_mesh"></a><a class="link" href="#_event_mesh">1.2.2. Event Mesh</a></h4>
+<div class="paragraph">
+<p>In this section, we&#8217;ll use the <em>Event Mesh</em> setup to communication between the different parts of refactored code.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the <em>Event Mesh</em> central component configuration, the <em>Broker</em>, which will be used in this example.
+The <em>Broker</em> here is the <em>Knative</em> component, and will be deployed in the <em>Kubernetes</em> cluster.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: eventing.knative.dev/v1
+kind: Broker
+metadata:
+  name: default
+  namespace: demo
+spec:
+  delivery:
+    backoffDelay: PT0.2S <i class="conum" data-value="1"></i><b>(1)</b>
+    backoffPolicy: exponential <i class="conum" data-value="2"></i><b>(2)</b>
+    retry: 10 <i class="conum" data-value="3"></i><b>(3)</b></code></pre>
+</div>
+</div>
+<div class="colist arabic">
+<table>
+<tr>
+<td><i class="conum" data-value="1"></i><b>1</b></td>
+<td>The <code>backoffDelay</code> is the delay between retries, and us use <code>200ms</code> initially.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="2"></i><b>2</b></td>
+<td>The <code>backoffPolicy</code> is set to <code>exponential</code>, which means that the delay will be doubled each time.</td>
+</tr>
+<tr>
+<td><i class="conum" data-value="3"></i><b>3</b></td>
+<td>The <code>retry</code> is the number of times we retry before giving up.</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-important" title="Important"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Because the policy is <code>exponential</code>, the maximum time the <em>Broker</em> will be retrying is 6 min and 49 sec.
+In the above configuration, after that time is reached, the event will be dropped.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-note" title="Note"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>A <code>deadLetterSink</code> could be configured for the <em>Broker</em> to send the events that failed to be delivered in time to a back-up location.
+Events captured in a back-up location can be re-transmitted into the <em>Event Mesh</em> later.</p>
+</div>
+</td>
+</tr>
+</table>
 </div>
 <div class="imageblock">
 <div class="content">
@@ -318,7 +537,7 @@ The refactoring will be limited to make the process easy to understand.</p>
 <p>The diagram illustrates the flow of events between the legacy application, the Knative <em>Event Mesh</em>, the fee calculator service, and the datastore.</p>
 </div>
 <div class="paragraph">
-<p>In this video you can see xpto:</p>
+<p>In this video you can see the above example presented by Red Hat' employee <a href="https://github.com/cardil">Chris Suszynski</a>:</p>
 </div>
 <div class="videoblock">
 <div class="content">
@@ -331,40 +550,21 @@ The refactoring will be limited to make the process easy to understand.</p>
 </div>
 </div>
 </div>
+</div>
 <div class="sect1">
 <h2 id="_run_the_demonstration"><a class="anchor" href="#_run_the_demonstration"></a><a class="link" href="#_run_the_demonstration">2. Run the demonstration</a></h2>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_before_getting_started"><a class="anchor" href="#_before_getting_started"></a><a class="link" href="#_before_getting_started">2.1. Before getting started</a></h3>
-<div class="paragraph">
-<p>To run this demo, you will need xpto.
-Adding to that, make sure to have:</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p>ABC</p>
-</li>
-<li>
-<p>XYZ</p>
-</li>
-<li>
-<p>XPTO</p>
-</li>
-</ul>
-</div>
+
 </div>
 <div class="sect2">
 <h3 id="_installing_the_demo"><a class="anchor" href="#_installing_the_demo"></a><a class="link" href="#_installing_the_demo">2.2. Installing the demo</a></h3>
-<div class="paragraph">
-<p>Installation guide and basic test of the demo installation if needed</p>
-</div>
+
 </div>
 <div class="sect2">
 <h3 id="_walkthrough_guide"><a class="anchor" href="#_walkthrough_guide"></a><a class="link" href="#_walkthrough_guide">2.3. Walkthrough guide</a></h3>
-<div class="paragraph">
-<p>How to run through the demo</p>
-</div>
+
 </div>
 </div>
 </div>

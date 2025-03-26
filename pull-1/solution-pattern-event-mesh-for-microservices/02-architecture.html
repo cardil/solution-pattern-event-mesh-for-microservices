@@ -185,7 +185,7 @@ Based on <a href="https://kubernetes.io/">Kubernetes</a>.</p>
 Based on <a href="https://knative.dev">Knative</a> project.</p>
 </li>
 <li>
-<p><a href="https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq">Red Hat AMQ Streams</a>
+<p><a href="https://developers.redhat.com/products/streams-for-apache-kafka">Streams for Apache Kafka</a>
 &mdash; (Optional) Provides a persistence for <em>Event Mesh</em>, likely needed in production.
 Based on <a href="https://strimzi.io/">Strimzi</a> project.</p>
 </li>
@@ -200,15 +200,18 @@ Based on <a href="https://strimzi.io/">Strimzi</a> project.</p>
 <p><a href="https://cloudevents.io/">CloudEvents</a> &mdash; Provides a standard for event metadata</p>
 </li>
 <li>
-<p>Rust and <a href="https://access.redhat.com/products/quarkus">Quarkus</a> &mdash; Implementation examples.</p>
+<p><a href="https://opentelemetry.io/">OpenTelemetry</a> &mdash; (Optional) Facilitates tracing for observability.</p>
 </li>
 <li>
-<p><a href="https://opentelemetry.io/">OpenTelemetry</a> &mdash; (Optional) Facilitates tracing for observability.</p>
+<p>Rust and Java &mdash; Implementation examples.</p>
 </li>
 </ul>
 </div>
 </li>
 </ul>
+</div>
+<div class="paragraph">
+<p><em>Kubernetes</em>, <em>Knative</em>, <em>Strimzi</em>, <em>CloudEvents</em>, and <em>OpenTelemetry</em> are <a href="https://landscape.cncf.io/">CNCF projects</a>.</p>
 </div>
 </div>
 </div>
@@ -229,8 +232,8 @@ For instance, upon the completion of a ride-sharing service at the end-user&#821
 The capture should be performed regardless of any potential operational disruptions affecting dependent services (e.g., invoicing).</p>
 </div>
 <div class="paragraph">
-<p>In such scenarios, transactional applications typically return an error, which prevents any data from being changed, and causes the loss of real-world intent of end-users.
-This results in an adverse user experience and a deviation from the genuine business process, potentially leading to customer dissatisfaction.</p>
+<p>In such scenarios, transactional applications, which typically encompass a number of steps in a user workflow, make all the steps undone when an error is returned.
+This prevents any data from being changed, and causes the loss of real-world intent of end-users, and results in an adverse user experience and a deviation from the genuine business process, potentially leading to customer dissatisfaction.</p>
 </div>
 </div>
 <div class="sect2">
@@ -247,7 +250,7 @@ Firstly, it persists the incoming events, thereby maintaining a record of change
 Secondly, it routes these events to their respective endpoints, ensuring that the appropriate microservices are notified and can subsequently update their internal states based on the event data.</p>
 </div>
 <div class="paragraph">
-<p>The mesh&#8217;s inherent resilience is further bolstered by its exponential backoff strategy, which it employs when encountering operational failures.
+<p>The mesh&#8217;s inherent resilience is further bolstered by its built-in retry strategies (linear or exponential backoff), which it employs when encountering operational failures.
 This mechanism ensures that the system retries the operation until it succeeds, thus mitigating the risk of data loss or system disruption due to transient issues.</p>
 </div>
 <div class="paragraph">
@@ -257,7 +260,7 @@ This mechanism ensures that the system retries the operation until it succeeds, 
 <ul>
 <li>
 <p><strong>Decomposition of the application into independently functioning services</strong>:
-This approach facilitates a division of labor, with each service handling specific responsibilities.
+This approach facilitates a division of labor, with each service handling specific responsibilities&#8201;&#8212;&#8201;the <a href="https://en.wikipedia.org/wiki/Domain-driven_design">Domain-driven design</a> approach fits here quite well.
 This not only enhances maintainability but also fosters scalability, as services can be independently scaled based on their demands.</p>
 </li>
 <li>
@@ -293,13 +296,13 @@ The <em>Event Mesh</em>'s event-driven model, coupled with the retries and event
 <p>An end-user application sends an <em>HTTP</em> request to the <em>Event Mesh</em>. Such message can be understood as a <em>Command</em> type event.</p>
 </li>
 <li>
-<p>The <em>Event Mesh</em> (Broker) persists the event in a queue (e.g. Kafka).
+<p>The <em>Event Mesh</em> (Broker) persists the event in a queue (like an Apache Kafka topic, but the implementation is hidden from the user).
 After <em>Event Mesh</em> persists safely the data, it returns a successful <em>HTTP</em> response with the <code>202 Accepted</code> return code.
 At this point, the operation could already be considered successful, from the end-user point of view.
 It will eventually settle correctly in all downstream systems.</p>
 </li>
 <li>
-<p>The <em>Event Mesh</em> routes the event to the appropriate endpoint based on the event&#8217;s metadata and configured triggering rules.</p>
+<p>The <em>Event Mesh</em> routes the event to the appropriate endpoint based on the CloudEvent&#8217;s metadata and configured triggering rules.</p>
 </li>
 <li>
 <p>The endpoints receive the events and process them, updating their internal states and potentially emitting new events for downstream consumers.
@@ -488,7 +491,7 @@ For instance:</p>
 <h3 id="_improving_resilience_in_applications"><a class="anchor" href="#_improving_resilience_in_applications"></a><a class="link" href="#_improving_resilience_in_applications">2.8. Improving Resilience in Applications</a></h3>
 <div class="paragraph">
 <p>Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
-Replacing these with asynchronous event-driven communication reduces dependencies and makes the system <em>Eventually Consistent</em>.</p>
+Replacing these with asynchronous event-driven communication reduces dependencies and makes the system <a href="https://en.wikipedia.org/wiki/Eventual_consistency"><em>Eventually Consistent</em></a>.</p>
 </div>
 <div class="paragraph">
 <p>For example, invoicing and notification services in a ride-sharing platform can process events independently, ensuring that downtime in one service does not block the entire workflow.</p>

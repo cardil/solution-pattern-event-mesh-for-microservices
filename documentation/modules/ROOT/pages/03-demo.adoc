@@ -253,7 +253,7 @@ The last part of the refactoring will be the changes needed in our legacy Java a
 We need to remove the _Drivers_ logic and send events to the _Event Mesh_ instead.
 We also need to accept new events coming from the _Event Mesh_, as the calculated fee will be transmitted as such.
 
-Here's the refactored `+completeTransit+` method:
+Here's the refactored code:
 [source,java]
 ----
 public void completeTransit(UUID requestUUID, AddressDTO destinationAddress) {

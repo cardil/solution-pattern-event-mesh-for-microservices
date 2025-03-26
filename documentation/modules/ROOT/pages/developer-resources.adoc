@@ -6,7 +6,7 @@
 
 == Developer Resources
 
-* https://github.com/cardil/cabs-usvc[cardil / cabs-usvc] _(The example code used in this solution)_
+* https://github.com/cardil/cabs-usvc[Demo Source] _(The example code used in this solution)_
 * https://youtu.be/Rc5IO6S6ZOk[youtu.be / Rc5IO6S6ZOk] _(The talk that served a base for this solution)_
 * https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
 * https://knative.dev/docs/eventing/event-mesh/[Knative Event Mesh]

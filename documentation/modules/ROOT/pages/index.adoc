@@ -11,7 +11,7 @@ that are often at least as complex as the business they operate in.
 This solution pattern is written to make it obvious and to show simple, yet
 elegant, correct, and comprehensive way of building software, either in
 greenfield or even in legacy projects. This solution leverages the
-https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat Serverless]
+https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
 Eventing component, which implements the https://www.redhat.com/en/topics/integration/what-is-an-event-mesh[Event Mesh] pattern.
 
 *Contributors:* https://github.com/cardil[Chris Suszynski]

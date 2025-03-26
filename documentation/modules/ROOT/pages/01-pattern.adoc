@@ -8,12 +8,12 @@ The team saw a https://www.youtube.com/watch?v=Rc5IO6S6ZOk[talk on _Event Mesh_]
 The talk presented the advantages of moving beyond transactional architectures in favor of eventual consistency.
 By leveraging event meshes with technologies like Knative, developers can achieve decoupled, reliable microservices without extensive re-engineering.
 This solution addresses inefficiencies and aligns distributed systems with real-world business processes.
-The team had figured out they could leverage the _CQRS_ pattern together with _Knative's Event Mesh_
+The team had figured out they could leverage the https://martinfowler.com/bliki/CQRS.html[_CQRS_] pattern together with _Knative's Event Mesh_
 to modernize their application in a non-extrusive way.
 
 == The Solution
 
-The core of this solution is an event mesh—a dynamic, flexible layer that routes, retries, and processes asynchronous events across distributed components.
+The core of this solution is an event mesh -- a dynamic, flexible infrastructure layer that routes, retries, and processes asynchronous events across distributed components.
 Using _Knative Eventing_ and _CloudEvents_, this pattern enables:
 
 - *Reliable delivery* of events with retry mechanisms.

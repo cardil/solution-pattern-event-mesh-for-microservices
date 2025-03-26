@@ -22,13 +22,15 @@ Based on https://kubernetes.io/[Kubernetes].
 ** https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
 &mdash; Provides the _Event Mesh_ and _Serverless_ capabilities.
 Based on https://knative.dev[Knative] project.
-** https://swc.saas.ibm.com/en-us/redhat-marketplace/products/red-hat-amq[Red Hat AMQ Streams]
+** https://developers.redhat.com/products/streams-for-apache-kafka[Streams for Apache Kafka]
 &mdash; (Optional) Provides a persistence for _Event Mesh_, likely needed in production.
 Based on https://strimzi.io/[Strimzi] project.
 * Other open source technologies:
 ** https://cloudevents.io/[CloudEvents] &mdash; Provides a standard for event metadata
-** Rust and https://access.redhat.com/products/quarkus[Quarkus] &mdash; Implementation examples.
 ** https://opentelemetry.io/[OpenTelemetry] &mdash; (Optional) Facilitates tracing for observability.
+** Rust and Java &mdash; Implementation examples.
+
+_Kubernetes_, _Knative_, _Strimzi_, _CloudEvents_, and _OpenTelemetry_ are https://landscape.cncf.io/[CNCF projects].
 
 [#in_depth]
 == An in-depth look at the solution's architecture
@@ -44,8 +46,8 @@ Traditional systems often enforce strict transactional consistency, which can im
 For instance, upon the completion of a ride-sharing service at the end-user's destination, the system should reliably capture this real-world event.
 The capture should be performed regardless of any potential operational disruptions affecting dependent services (e.g., invoicing).
 
-In such scenarios, transactional applications typically return an error, which prevents any data from being changed, and causes the loss of real-world intent of end-users.
-This results in an adverse user experience and a deviation from the genuine business process, potentially leading to customer dissatisfaction.
+In such scenarios, transactional applications, which typically encompass a number of steps in a user workflow, make all the steps undone when an error is returned.
+This prevents any data from being changed, and causes the loss of real-world intent of end-users, and results in an adverse user experience and a deviation from the genuine business process, potentially leading to customer dissatisfaction.
 
 === Solution Breakdown
 
@@ -58,13 +60,13 @@ The primary responsibility of the _Event Mesh_ is twofold.
 Firstly, it persists the incoming events, thereby maintaining a record of changes in the system's state.
 Secondly, it routes these events to their respective endpoints, ensuring that the appropriate microservices are notified and can subsequently update their internal states based on the event data.
 
-The mesh's inherent resilience is further bolstered by its exponential backoff strategy, which it employs when encountering operational failures.
+The mesh's inherent resilience is further bolstered by its built-in retry strategies (linear or exponential backoff), which it employs when encountering operational failures.
 This mechanism ensures that the system retries the operation until it succeeds, thus mitigating the risk of data loss or system disruption due to transient issues.
 
 By integrating the _Event Mesh_ into the system architecture, several architectural benefits are achieved:
 
 * **Decomposition of the application into independently functioning services**:
-This approach facilitates a division of labor, with each service handling specific responsibilities.
+This approach facilitates a division of labor, with each service handling specific responsibilities -- the https://en.wikipedia.org/wiki/Domain-driven_design[Domain-driven design] approach fits here quite well.
 This not only enhances maintainability but also fosters scalability, as services can be independently scaled based on their demands.
 
 * **Improved business alignment**:
@@ -87,11 +89,11 @@ The event-driven flow enables eventual consistent collaboration and state synchr
 A usual flow may look like:
 
 1. An end-user application sends an _HTTP_ request to the _Event Mesh_. Such message can be understood as a _Command_ type event.
-2. The _Event Mesh_ (Broker) persists the event in a queue (e.g. Kafka).
+2. The _Event Mesh_ (Broker) persists the event in a queue (like an Apache Kafka topic, but the implementation is hidden from the user).
 After _Event Mesh_ persists safely the data, it returns a successful _HTTP_ response with the `202 Accepted` return code.
 At this point, the operation could already be considered successful, from the end-user point of view.
 It will eventually settle correctly in all downstream systems.
-3. The _Event Mesh_ routes the event to the appropriate endpoint based on the event's metadata and configured triggering rules.
+3. The _Event Mesh_ routes the event to the appropriate endpoint based on the CloudEvent's metadata and configured triggering rules.
 4. The endpoints receive the events and process them, updating their internal states and potentially emitting new events for downstream consumers.
 The potential events are transmitted to the _Event Mesh_.
 5. The dispatch loop continues until the event queue is empty and all the events are processed successfully.
@@ -232,7 +234,7 @@ For instance:
 === Improving Resilience in Applications
 
 Traditional systems often rely on synchronous calls and transactions, which can cascade failures across components.
-Replacing these with asynchronous event-driven communication reduces dependencies and makes the system _Eventually Consistent_.
+Replacing these with asynchronous event-driven communication reduces dependencies and makes the system https://en.wikipedia.org/wiki/Eventual_consistency[_Eventually Consistent_].
 
 For example, invoicing and notification services in a ride-sharing platform can process events independently, ensuring that downtime in one service does not block the entire workflow.
 

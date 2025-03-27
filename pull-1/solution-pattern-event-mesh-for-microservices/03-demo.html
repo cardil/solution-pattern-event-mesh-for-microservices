@@ -156,7 +156,7 @@
 <div class="sectionbody">
 <div class="paragraph">
 <p>Let&#8217;s take a look at the following example.
-We&#8217;ll be looking at a Cabs ride-sharing application, that mimics real-world solutions of similar kind.
+We&#8217;ll be looking at a Cabs ride-sharing application, that resembles real-world solutions of similar kind.
 The application is written in a popular Java framework.</p>
 </div>
 <div class="sect2">
@@ -189,18 +189,19 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
     }
     Address from = addressRepository.getByHash(transitDetails.from.getHash());
     Address to = addressRepository.getByHash(destinationAddress.getHash());
+
     Money finalPrice = completeTransitService.completeTransit(
       driverId, requestUUID, from, to); <i class="conum" data-value="2"></i><b>(2)</b>
-    Money driverFee = driverFeeService.calculateDriverFee(
-      finalPrice, driverId);
+    Money driverFee = driverFeeService.calculateDriverFee(finalPrice, driverId);
     driverService.markNotOccupied(driverId); <i class="conum" data-value="2"></i><b>(2)</b>
-    transitDetailsFacade.transitCompleted(requestUUID,
-      Instant.now(clock), finalPrice, driverFee); <i class="conum" data-value="2"></i><b>(2)</b>
-    awardsService.registerMiles(transitDetails.client.getId(),
-      transitDetails.transitId); <i class="conum" data-value="2"></i><b>(2)</b>
+
+    transitDetailsFacade.transitCompleted(requestUUID, Instant.now(clock),
+      finalPrice, driverFee); <i class="conum" data-value="2"></i><b>(2)</b>
+    awardsService.registerMiles(transitDetails.client.getId(), transitDetails.transitId); <i class="conum" data-value="2"></i><b>(2)</b>
     invoiceGenerator.generate(finalPrice.toInt(),
       transitDetails.client.getName() + " " +
       transitDetails.client.getLastName()); <i class="conum" data-value="2"></i><b>(2)</b>
+
     eventsEventSender.publish(new TransitCompleted(
       transitDetails.client.getId(), transitDetails.transitId,
       transitDetails.from.getHash(), destinationAddress.getHash(),
@@ -309,19 +310,22 @@ The entrypoint is the <em>Cloud Event</em> of type <code>cabs.drivers.calculate-
 <div class="content">
 <pre class="highlightjs highlight"><code class="language-rust hljs" data-lang="rust">impl Service {
   pub async fn calculate_fee(&amp;mut self, ce: Event) -&gt; Result&lt;()&gt; {
-    let fee_event = Self::parse_fee_event(ce)?; <i class="conum" data-value="1"></i><b>(1)</b>
-    let subject = fee_event.id.clone();
+    let calc_fee_intent = Self::unwrap_calculatefee(ce)?; <i class="conum" data-value="1"></i><b>(1)</b>
+    let subject = calc_fee_intent.id.clone();
 
-    let drv = self.repo.get(&amp;fee_event.entity.driver_id).await?;
+    log::debug!("calculate fee for: {:?}", calc_fee_intent);
+    let drv = self.repo.get(&amp;calc_fee_intent.entity.driver_id).await?;
 
-    let fee = drv.calculate_fee(&amp;fee_event.entity.transit_price); <i class="conum" data-value="2"></i><b>(2)</b>
+    let fee = drv.calculate_fee(&amp;calc_fee_intent.entity.transit_price); <i class="conum" data-value="2"></i><b>(2)</b>
 
-    let fee_event = DriverFeeEvent {
-        driver_id: fee_event.entity.driver_id,
+    log::debug!("fee value: {:?}", fee);
+
+    let driverfee_event = DriverFeeEvent {
+        driver_id: calc_fee_intent.entity.driver_id,
         fee,
     }; <i class="conum" data-value="3"></i><b>(3)</b>
 
-    let mut builder = fee_event.to_builder(); <i class="conum" data-value="3"></i><b>(3)</b>
+    let mut builder = driverfee_event.to_builder(); <i class="conum" data-value="3"></i><b>(3)</b>
     if let Some(id) = subject {
         builder = builder.subject(id);
     } <i class="conum" data-value="3"></i><b>(3)</b>
@@ -342,19 +346,19 @@ The entrypoint is the <em>Cloud Event</em> of type <code>cabs.drivers.calculate-
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>We are parsing the internal, business logic, fee event from the <em>Cloud Events</em> envelope.</td>
+<td>We are unwrapping <em>Cloud Event</em> envelope into an internal, domain, fee value object.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>We are calculating the fee for this event, using some business logic.</td>
+<td>We are calculating the fee value using some domain logic.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="3"></i><b>3</b></td>
-<td>We are wrapping the calculated fee into the <em>Cloud Events</em> envelope.</td>
+<td>We are wrapping the calculated fee value into a new <em>Cloud Event</em>.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="4"></i><b>4</b></td>
-<td>We are sending the fee back to the <em>Event Mesh</em> using <em>HTTP REST</em> client.</td>
+<td>We are sending the fee, as <em>Cloud Event</em>, back to the <em>Event Mesh</em> using <em>HTTP REST</em> client.</td>
 </tr>
 </table>
 </div>
@@ -489,7 +493,7 @@ spec:
 </td>
 <td class="content">
 <div class="paragraph">
-<p>The policy is <code>exponential</code>, and the <code>retry</code> is 10, which means that after approximately 6 min and 50 sec the event will be dropped.</p>
+<p>In our example, the policy is <code>exponential</code>, and the <code>retry</code> is 10, which means that after approximately 6 min and 50 sec the event will be dropped (or routed to the <code>deadLetterSink</code> if configured).</p>
 </div>
 </td>
 </tr>
@@ -504,7 +508,7 @@ spec:
 <td class="content">
 <div class="paragraph">
 <p>A <code>deadLetterSink</code> option could be configured for the <em>Broker</em> to send the events that failed to be delivered in time to a back-up location.
-Events captured in a back-up location can be re-transmitted into the <em>Event Mesh</em> later.</p>
+Events captured in a back-up location can be re-transmitted into the <em>Event Mesh</em> later by reconfiguring the <em>Mesh</em> (after resolving the outage or deploying a bug fix).</p>
 </div>
 </td>
 </tr>
@@ -555,7 +559,7 @@ It&#8217;s asynchronous.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
-<td>We are using the <code>@EventListener</code> annotation to listen for the business events withing the applition.
+<td>We are using the <code>@EventListener</code> annotation to listen for the domain events within the application.
 Don&#8217;t confuse this with <em>Cloud Events</em> that are sent and received outside the application.</td>
 </tr>
 <tr>
@@ -569,7 +573,7 @@ Don&#8217;t confuse this with <em>Cloud Events</em> that are sent and received o
 </table>
 </div>
 <div class="paragraph">
-<p>To make it work, we need to add a new <em>Cloud Event</em> sender and listener.
+<p>To communicate with the <em>Event Mesh</em>, we need to add a new <em>Cloud Event</em> sender and listener.
 That&#8217;s being done similarly, as in the case of <em>Rust</em> application.</p>
 </div>
 <div class="paragraph">
@@ -686,12 +690,12 @@ public class CloudEventReceiver {
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>We unwrap the <em>CloudEvent</em> into our custom event type</td>
+<td>We unwrap the <em>CloudEvent</em> into our domain event type (in the example that&#8217;s the <code>DriverFeeCalculated</code> type)</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
 <td>And publish it withing the application, using the framework&#8217;s <em>EventsPublisher</em> implementation.
-The event will be transmitted to the methods annotated with <code>@EventListener</code>.</td>
+The domain events will be transmitted to the methods annotated with <code>@EventListener</code>.</td>
 </tr>
 </table>
 </div>
@@ -703,7 +707,7 @@ The event will be transmitted to the methods annotated with <code>@EventListener
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Don&#8217;t confuse the the framework&#8217;s <em>EventsPublisher</em> with <em>Cloud Event</em> sender and receiver.</p>
+<p>Don&#8217;t confuse the framework&#8217;s <em>EventsPublisher</em> with <em>Cloud Event</em> sender and receiver.</p>
 </div>
 </td>
 </tr>
@@ -1117,7 +1121,8 @@ trigger.eventing.knative.dev/trg-drivers condition met</code></pre>
 </div>
 <div class="paragraph">
 <p>The console shows two sink bindings on the left, and they are feeding the events from the applications to the <em>Broker</em> (depicted in the center).
-on the right, you could see the two applications deployed as <em>Knative</em> services, and two triggers (as lines) that configure the <em>Event Mesh</em> to feed appropriate events to the applications.</p>
+The <em>Broker</em> is the centralized infrastructure piece that ensures a proper decoupling of the services.
+On the right, you could see the two applications deployed as <em>Knative</em> services, and two triggers (as lines) that configure the <em>Event Mesh</em> to feed appropriate events to the applications.</p>
 </div>
 </div>
 </div>

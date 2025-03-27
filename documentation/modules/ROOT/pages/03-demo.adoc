@@ -8,7 +8,7 @@
 == Demonstration
 
 Let's take a look at the following example.
-We'll be looking at a Cabs ride-sharing application, that mimics real-world solutions of similar kind.
+We'll be looking at a Cabs ride-sharing application, that resembles real-world solutions of similar kind.
 The application is written in a popular Java framework.
 
 === Initial application
@@ -31,18 +31,19 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
     }
     Address from = addressRepository.getByHash(transitDetails.from.getHash());
     Address to = addressRepository.getByHash(destinationAddress.getHash());
+
     Money finalPrice = completeTransitService.completeTransit(
       driverId, requestUUID, from, to); // <2>
-    Money driverFee = driverFeeService.calculateDriverFee(
-      finalPrice, driverId);
+    Money driverFee = driverFeeService.calculateDriverFee(finalPrice, driverId);
     driverService.markNotOccupied(driverId); // <2>
-    transitDetailsFacade.transitCompleted(requestUUID,
-      Instant.now(clock), finalPrice, driverFee); // <2>
-    awardsService.registerMiles(transitDetails.client.getId(),
-      transitDetails.transitId); // <2>
+
+    transitDetailsFacade.transitCompleted(requestUUID, Instant.now(clock),
+      finalPrice, driverFee); // <2>
+    awardsService.registerMiles(transitDetails.client.getId(), transitDetails.transitId); // <2>
     invoiceGenerator.generate(finalPrice.toInt(),
       transitDetails.client.getName() + " " +
       transitDetails.client.getLastName()); // <2>
+
     eventsEventSender.publish(new TransitCompleted(
       transitDetails.client.getId(), transitDetails.transitId,
       transitDetails.from.getHash(), destinationAddress.getHash(),
@@ -112,19 +113,22 @@ The entrypoint is the _Cloud Event_ of type `cabs.drivers.calculate-fee` we are 
 ----
 impl Service {
   pub async fn calculate_fee(&mut self, ce: Event) -> Result<()> {
-    let fee_event = Self::parse_fee_event(ce)?; // <1>
-    let subject = fee_event.id.clone();
+    let calc_fee_intent = Self::unwrap_calculatefee(ce)?; // <1>
+    let subject = calc_fee_intent.id.clone();
 
-    let drv = self.repo.get(&fee_event.entity.driver_id).await?;
+    log::debug!("calculate fee for: {:?}", calc_fee_intent);
+    let drv = self.repo.get(&calc_fee_intent.entity.driver_id).await?;
 
-    let fee = drv.calculate_fee(&fee_event.entity.transit_price); // <2>
+    let fee = drv.calculate_fee(&calc_fee_intent.entity.transit_price); // <2>
 
-    let fee_event = DriverFeeEvent {
-        driver_id: fee_event.entity.driver_id,
+    log::debug!("fee value: {:?}", fee);
+
+    let driverfee_event = DriverFeeEvent {
+        driver_id: calc_fee_intent.entity.driver_id,
         fee,
     }; // <3>
 
-    let mut builder = fee_event.to_builder(); // <3>
+    let mut builder = driverfee_event.to_builder(); // <3>
     if let Some(id) = subject {
         builder = builder.subject(id);
     } // <3>
@@ -140,10 +144,10 @@ impl Service {
 
 In the above code, we are doing the following:
 
-<1> We are parsing the internal, business logic, fee event from the _Cloud Events_ envelope.
-<2> We are calculating the fee for this event, using some business logic.
-<3> We are wrapping the calculated fee into the _Cloud Events_ envelope.
-<4> We are sending the fee back to the _Event Mesh_ using _HTTP REST_ client.
+<1> We are unwrapping _Cloud Event_ envelope into an internal, domain, fee value object.
+<2> We are calculating the fee value using some domain logic.
+<3> We are wrapping the calculated fee value into a new _Cloud Event_.
+<4> We are sending the fee, as _Cloud Event_, back to the _Event Mesh_ using _HTTP REST_ client.
 
 Of course, in order for this method to be called, we need to route the event from the HTTP listener:
 
@@ -238,13 +242,13 @@ spec:
 
 [IMPORTANT]
 ====
-The policy is `+exponential+`, and the `+retry+` is 10, which means that after approximately 6 min and 50 sec the event will be dropped.
+In our example, the policy is `+exponential+`, and the `+retry+` is 10, which means that after approximately 6 min and 50 sec the event will be dropped (or routed to the `+deadLetterSink+` if configured).
 ====
 
 [NOTE]
 ====
 A `+deadLetterSink+` option could be configured for the _Broker_ to send the events that failed to be delivered in time to a back-up location.
-Events captured in a back-up location can be re-transmitted into the _Event Mesh_ later.
+Events captured in a back-up location can be re-transmitted into the _Event Mesh_ later by reconfiguring the _Mesh_ (after resolving the outage or deploying a bug fix).
 ====
 
 ==== Legacy application changes
@@ -276,12 +280,12 @@ public void driverFeeCalculated(DriverFee driverFee) { // <3>
 ====
 <1> Notice, we are just invoking the `+calculateDriverFee+`, that doesn't return anything.
 It's asynchronous.
-<2> We are using the `@EventListener` annotation to listen for the business events withing the applition.
+<2> We are using the `@EventListener` annotation to listen for the domain events within the application.
 Don't confuse this with _Cloud Events_ that are sent and received outside the application.
 <3> The exact fee is calculated by the _Drivers_ module, and we'll be notified later, with the `+driverFeeCalculated+` method.
 ====
 
-To make it work, we need to add a new _Cloud Event_ sender and listener.
+To communicate with the _Event Mesh_, we need to add a new _Cloud Event_ sender and listener.
 That's being done similarly, as in the case of _Rust_ application.
 
 Below, you can see how you may implement the _Cloud Event_ sender:
@@ -391,13 +395,13 @@ public class CloudEventReceiver {
 }
 ----
 
-<1> We unwrap the _CloudEvent_ into our custom event type
+<1> We unwrap the _CloudEvent_ into our domain event type (in the example that's the `+DriverFeeCalculated+` type)
 <2> And publish it withing the application, using the framework's _EventsPublisher_ implementation.
-The event will be transmitted to the methods annotated with `@EventListener`.
+The domain events will be transmitted to the methods annotated with `@EventListener`.
 
 [CAUTION]
 ====
-Don't confuse the the framework's _EventsPublisher_ with _Cloud Event_ sender and receiver.
+Don't confuse the framework's _EventsPublisher_ with _Cloud Event_ sender and receiver.
 ====
 
 ==== The wiring of our _Event Mesh_
@@ -765,7 +769,8 @@ The OpenShift Container Platform provides can provide a clear visualization of o
 image::solution-odc.png[width=100%]
 
 The console shows two sink bindings on the left, and they are feeding the events from the applications to the _Broker_ (depicted in the center).
-on the right, you could see the two applications deployed as _Knative_ services, and two triggers (as lines) that configure the _Event Mesh_ to feed appropriate events to the applications.
+The _Broker_ is the centralized infrastructure piece that ensures a proper decoupling of the services.
+On the right, you could see the two applications deployed as _Knative_ services, and two triggers (as lines) that configure the _Event Mesh_ to feed appropriate events to the applications.
 
 === Walkthrough guide
 

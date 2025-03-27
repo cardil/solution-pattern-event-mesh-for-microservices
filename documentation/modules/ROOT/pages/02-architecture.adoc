@@ -88,7 +88,8 @@ The event-driven flow enables eventual consistent collaboration and state synchr
 
 A usual flow may look like:
 
-1. An end-user application sends an _HTTP_ request to the _Event Mesh_. Such message can be understood as a _Command_ type event.
+1. An end-user application sends an _HTTP_ request to the _Event Mesh_.
+Such message can be understood as a _Command_ type event.
 2. The _Event Mesh_ (Broker) persists the event in a queue (like an Apache Kafka topic, but the implementation is hidden from the user).
 After _Event Mesh_ persists safely the data, it returns a successful _HTTP_ response with the `202 Accepted` return code.
 At this point, the operation could already be considered successful, from the end-user point of view.
@@ -155,7 +156,7 @@ The _Event Mesh_ pushes the events as _CloudEvents_ encoded as _REST_ messages.
 The exponential backoff algorithm used by _Event Mesh_ is configurable.
 It uses the following formula to calculate the backoff period: `+backoffDelay * 2^<numberOfRetries>+`, where the backoff delay is a base number of seconds, and number of retries is automatically tracked by the _Event Mesh_.
 
-A dead letter sink can also be configured to send events in case they exceed the maximum retry number, which is also configurable. 
+A dead letter sink can also be configured to send events in case they exceed the maximum retry number, which is also configurable.
 ====
 
 === _Work Ledger_ analogy

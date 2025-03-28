@@ -71,7 +71,7 @@
     <a class="nav-link" href="index.html#use-cases">1.1 Use cases</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="index.html#_the_story_behind_this_solution_pattern">1.2 The story behind this solution pattern</a>
+    <a class="nav-link" href="index.html#_the_story">1.2 The story behind this solution pattern</a>
   </li>
   <li class="nav-item" data-depth="2">
     <a class="nav-link" href="index.html#_the_solution">1.3 The solution</a>
@@ -101,7 +101,16 @@
     <a class="nav-link" href="#_initial_application">3.1. Initial application</a>
   </li>
   <li class="nav-item" data-depth="2">
-    <a class="nav-link" href="#_run_the_demonstration">3.2. Run this demonstration</a>
+    <a class="nav-link" href="#_refactoring_plan">3.2. Refactoring plan</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#_run_this_demonstration">3.3. Run this demonstration</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#_in_depth_refactoring">3.4. In-depth look at the refactoring</a>
+  </li>
+  <li class="nav-item" data-depth="2">
+    <a class="nav-link" href="#_conclusion">3.5. Conclusion</a>
   </li>
 </ul>
   </li>
@@ -151,16 +160,16 @@
 <article class="doc">
 <h1 class="page">Building Apps around the Event Mesh</h1>
 <h1 id="_see_the_solution_in_action" class="sect0"><a class="anchor" href="#_see_the_solution_in_action"></a><a class="link" href="#_see_the_solution_in_action">See the Solution in Action</a></h1>
-<div class="sect1">
-<h2 id="_demonstration"><a class="anchor" href="#_demonstration"></a><a class="link" href="#_demonstration">1. Demonstration</a></h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>Let&#8217;s take a look at the following example.
+<div class="openblock partintro">
+<div class="content">
+Let&#8217;s take a look at the following example.
 We&#8217;ll be looking at a Cabs ride-sharing application, that resembles real-world solutions of similar kind.
-The application is written in a popular Java framework.</p>
+The application is written in a popular Java framework.
 </div>
-<div class="sect2">
-<h3 id="_initial_application"><a class="anchor" href="#_initial_application"></a><a class="link" href="#_initial_application">1.1. Initial application</a></h3>
+</div>
+<div class="sect1">
+<h2 id="_initial_application"><a class="anchor" href="#_initial_application"></a><a class="link" href="#_initial_application">1. Initial application</a></h2>
+<div class="sectionbody">
 <div class="admonitionblock important">
 <table>
 <tr>
@@ -241,8 +250,8 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 At first glance, many developers don&#8217;t see any problems with similar code.
 Let&#8217;s break down the problems in detail.</p>
 </div>
-<div class="sect3">
-<h4 id="_overuse_of_transactional_processing"><a class="anchor" href="#_overuse_of_transactional_processing"></a><a class="link" href="#_overuse_of_transactional_processing">1.1.1. Overuse of transactional processing</a></h4>
+<div class="sect2">
+<h3 id="_overuse_of_transactional_processing"><a class="anchor" href="#_overuse_of_transactional_processing"></a><a class="link" href="#_overuse_of_transactional_processing">1.1. Overuse of transactional processing</a></h3>
 <div class="paragraph">
 <p>The transactional processing has been the cornerstone of many business applications.
 However, in most cases, the transactional processing isn&#8217;t the best fit for real-world processes.</p>
@@ -269,8 +278,8 @@ In fact, all the operations in this example could happen independently, and at d
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_bundling_of_different_logical_domains"><a class="anchor" href="#_bundling_of_different_logical_domains"></a><a class="link" href="#_bundling_of_different_logical_domains">1.1.2. Bundling of different logical domains</a></h4>
+<div class="sect2">
+<h3 id="_bundling_of_different_logical_domains"><a class="anchor" href="#_bundling_of_different_logical_domains"></a><a class="link" href="#_bundling_of_different_logical_domains">1.2. Bundling of different logical domains</a></h3>
 <div class="paragraph">
 <p>Our example is also very chatty, and hard to understand at first glance.
 In fact, this is quite common in similar applications.
@@ -283,8 +292,471 @@ Still, the application will do all the operations, starting from <code>completeT
 </div>
 </div>
 </div>
+</div>
+<div class="sect1">
+<h2 id="_refactoring_plan"><a class="anchor" href="#_refactoring_plan"></a><a class="link" href="#_refactoring_plan">2. Refactoring plan</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>In this section, we&#8217;ll plan the refactoring of the Cabs application.
+The refactoring will be limited to make the process easy to understand.
+The scope of the refactoring will be the extraction of drivers module, which is already a separate domain in the codebase.
+Within the scope of the <code>completeTransit</code> method, we&#8217;ll need to shift the way we calculate the fee for the driver.
+The calculation will be done asynchronously, and when the driver module publishes the calculation result, it will be saved back into the database.</p>
+</div>
+<div class="paragraph">
+<p>The base for the refactoring is the <em>Event Mesh</em> pattern, and the asynchronous communication will be done with <em>Cloud Events</em>.</p>
+</div>
+<div class="paragraph">
+<p>After the refactoring, the <code>completeTransit</code> code will use two event types:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><code>CalculateFee</code>&#8201;&#8212;&#8201;a command event, to calculate fee for the driver for given ride</p>
+</li>
+<li>
+<p><code>DriverFeeCalculated</code>&#8201;&#8212;&#8201;an information event, fired when the calculator does the logic to calculate the requested fee.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>The diagram below shows the sequence of operations that happen when we initiate refactored <code>completeTransit</code> code.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" alt="VP1DJiCm58JtFiMZ rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb rfgnpRIwWMVBC qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz mT YZS W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3 uuKpCNgB1JkEwQpzI FcjxoL5XgcUvdMioVL4soi iuIOQcE5N259RYPgKYMNJ 3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" width="100%">
+</div>
+</div>
+<div class="paragraph">
+<p>The diagram illustrates the flow of events between the legacy application, the <em>Knative Event Mesh</em>, the fee calculator service, and the datastore.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_run_this_demonstration"><a class="anchor" href="#_run_this_demonstration"></a><a class="link" href="#_run_this_demonstration">3. Run this demonstration</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Next, you can learn how to walk through this demo.</p>
+</div>
 <div class="sect2">
-<h3 id="_refactoring"><a class="anchor" href="#_refactoring"></a><a class="link" href="#_refactoring">1.2. Refactoring</a></h3>
+<h3 id="_before_getting_started"><a class="anchor" href="#_before_getting_started"></a><a class="link" href="#_before_getting_started">3.1. Before getting started</a></h3>
+<div class="paragraph">
+<p>We&#8217;ll be using the Red Hat OpenShift Container Platform (OCP) 4.x cluster, so make sure you have it available in your environment.</p>
+</div>
+<div class="paragraph">
+<p>You could use the <a href="https://developers.redhat.com/products/openshift/overview">Red Hat&#8217;s Developer Sandbox</a> to spin up an instance for you.</p>
+</div>
+<div class="paragraph">
+<p>Alternatively, you can use the <a href="https://developers.redhat.com/products/openshift-local/overview">OpenShift Local</a> installation.
+Make sure to give it enough resources to fit the Serverless Operator and our demo application.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_installing_the_demo"><a class="anchor" href="#_installing_the_demo"></a><a class="link" href="#_installing_the_demo">3.2. Installing the demo</a></h3>
+<div class="sect3">
+<h4 id="_installing_the_serverless_operator"><a class="anchor" href="#_installing_the_serverless_operator"></a><a class="link" href="#_installing_the_serverless_operator">3.2.1. Installing the Serverless Operator</a></h4>
+<div class="paragraph">
+<p>To install the Serverless Operator, follow <a href="https://docs.openshift.com/serverless/1.35/install/preparing-serverless-install.html">the documentation steps</a>.</p>
+</div>
+<div class="paragraph">
+<p>The <strong>TL;DR</strong> version would be to apply the following manifest, and wait until the operator is ready:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-serverless
+---
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  name: openshift-serverless
+  namespace: openshift-serverless
+spec: {}
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: serverless-operator
+  namespace: openshift-serverless
+spec:
+  channel: stable
+  name: serverless-operator
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here are commands to apply the above manifests.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">git clone https://github.com/cardil/cabs-usvc
+oc apply -f cabs-usvc/deploy/serverless/operator.yaml
+oc wait csv/serverless-operator.v1.35.0 \
+  --for 'jsonpath={.status.conditions[?(@.phase == "Succeeded")]}'</code></pre>
+</div>
+</div>
+<div class="admonitionblock caution">
+<table>
+<tr>
+<td class="icon">
+<i class="fa icon-caution" title="Caution"></i>
+</td>
+<td class="content">
+<div class="paragraph">
+<p>Replace the <code>v1.35.0</code> with the actual version of the Serverless Operator.</p>
+</div>
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the expected output</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">namespace/openshift-serverless created
+operatorgroup.operators.coreos.com/openshift-serverless created
+subscription.operators.coreos.com/serverless-operator created
+clusterserviceversion.operators.coreos.com/serverless-operator.v1.35.0 condition met</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_installing_the_serving_and_eventing_components"><a class="anchor" href="#_installing_the_serving_and_eventing_components"></a><a class="link" href="#_installing_the_serving_and_eventing_components">3.2.2. Installing the Serving and Eventing components</a></h4>
+<div class="paragraph">
+<p>To install the Serving and Eventing components, follow <a href="https://docs.openshift.com/serverless/1.35/install/installing-knative-serving.html">the Serving documentation steps</a> and <a href="https://docs.openshift.com/serverless/1.35/install/installing-knative-eventing.html">the Eventing documentation steps</a>.</p>
+</div>
+<div class="paragraph">
+<p>Again for <strong>TL;DR</strong> version for small, development purposes, you could apply the following manifests, and wait until the components are ready for operation:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
+kind: Namespace
+metadata:
+  name: knative-serving
+---
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeServing
+metadata:
+  name: knative-serving
+  namespace: knative-serving
+spec:
+  high-availability:
+    replicas: 1
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: knative-eventing
+---
+apiVersion: operator.knative.dev/v1beta1
+kind: KnativeEventing
+metadata:
+  name: knative-eventing
+  namespace: knative-eventing
+spec:
+  high-availability:
+    replicas: 1</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here are commands to apply the above manifests.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc apply \
+  -f cabs-usvc/deploy/serverless/serving.yaml \
+  -f cabs-usvc/deploy/serverless/eventing.yaml
+
+oc wait knativeserving/knative-serving \
+  --namespace knative-serving \
+  --for 'condition=Ready=True'
+oc wait knativeeventing/knative-eventing \
+  --namespace knative-eventing \
+  --for 'condition=Ready=True'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the expected output</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">Warning: resource namespaces/knative-serving is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by oc apply. oc apply should only be used on resources created declaratively by either oc create --save-config or oc apply. The missing annotation will be patched automatically.
+namespace/knative-serving configured
+knativeserving.operator.knative.dev/knative-serving created
+Warning: resource namespaces/knative-eventing is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by oc apply. oc apply should only be used on resources created declaratively by either oc create --save-config or oc apply. The missing annotation will be patched automatically.
+namespace/knative-eventing configured
+knativeeventing.operator.knative.dev/knative-eventing created
+knativeserving.operator.knative.dev/knative-serving condition met
+knativeeventing.operator.knative.dev/knative-eventing condition met</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_installing_the_demo_applications"><a class="anchor" href="#_installing_the_demo_applications"></a><a class="link" href="#_installing_the_demo_applications">3.2.3. Installing the demo applications</a></h4>
+<div class="paragraph">
+<p>To install the Demo application, apply the following manifests.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/legacy.yaml">The legacy application</a></p>
+</li>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/db/redis.yaml">The Drivers database</a></p>
+</li>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/drivers.yaml">The Drivers module</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Here are commands to apply the above manifests.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc create ns demo
+oc apply \
+  -f cabs-usvc/deploy/db/redis.yaml \
+  -f cabs-usvc/deploy/apps/drivers.yaml \
+  -f cabs-usvc/deploy/apps/legacy.yaml
+
+oc wait ksvc/drivers \
+  --namespace demo \
+  --for condition=Ready=True
+oc wait ksvc/legacy \
+  --namespace demo \
+  --for condition=Ready=True</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the expected output</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">namespace/demo created
+pod/redis created
+service/redis created
+service.serving.knative.dev/drivers created
+service.serving.knative.dev/legacy created
+service.serving.knative.dev/drivers condition met
+service.serving.knative.dev/legacy condition met</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_configuring_the_event_mesh"><a class="anchor" href="#_configuring_the_event_mesh"></a><a class="link" href="#_configuring_the_event_mesh">3.2.4. Configuring the Event Mesh</a></h4>
+<div class="paragraph">
+<p>To configure the Event Mesh, apply the following manifests.</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/broker.yaml"><em>Broker</em></a></p>
+</li>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/sources.yaml">Sources</a></p>
+</li>
+<li>
+<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/triggers.yaml">Triggers</a></p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Here are commands to apply the above manifests.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc apply \
+  -f cabs-usvc/deploy/mesh/broker.yaml \
+  -f cabs-usvc/deploy/mesh/sources.yaml \
+  -f cabs-usvc/deploy/mesh/triggers.yaml
+
+oc wait broker/default \
+  --namespace demo \
+  --for condition=Ready=True
+oc wait sinkbinding/drivers-binding \
+  --namespace demo \
+  --for condition=Ready=True
+oc wait sinkbinding/legacy-binding \
+  --namespace demo \
+  --for condition=Ready=True
+oc wait trigger/trg-drivers \
+  --namespace demo \
+  --for condition=Ready=True
+oc wait trigger/trg-drivers \
+  --namespace demo \
+  --for condition=Ready=True</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the expected output</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">broker.eventing.knative.dev/default created
+sinkbinding.sources.knative.dev/drivers-binding created
+sinkbinding.sources.knative.dev/legacy-binding created
+trigger.eventing.knative.dev/trg-drivers created
+trigger.eventing.knative.dev/trg-legacy created
+broker.eventing.knative.dev/default condition met
+sinkbinding.sources.knative.dev/drivers-binding condition met
+sinkbinding.sources.knative.dev/legacy-binding condition met
+trigger.eventing.knative.dev/trg-drivers condition met
+trigger.eventing.knative.dev/trg-drivers condition met</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The OpenShift Container Platform provides can provide a clear visualization of our deployed solution.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="_images/solution-odc.png" alt="solution odc" width="100%">
+</div>
+</div>
+<div class="paragraph">
+<p>The console shows two sink bindings on the left, and they are feeding the events from the applications to the <em>Broker</em> (depicted in the center).
+The <em>Broker</em> is the centralized infrastructure piece that ensures a proper decoupling of the services.
+On the right, you could see the two applications deployed as <em>Knative</em> services, and two triggers (as lines) that configure the <em>Event Mesh</em> to feed appropriate events to the applications.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_walkthrough_guide"><a class="anchor" href="#_walkthrough_guide"></a><a class="link" href="#_walkthrough_guide">3.3. Walkthrough guide</a></h3>
+<div class="paragraph">
+<p>With the demo pieces deployed on the cluster, we could go ahead with testing the functionality.</p>
+</div>
+<div class="paragraph">
+<p>For the sake of brevity, the legacy application, at startup, prepares some development data in the in-memory database its running on.
+We will leverage that data to complete transit without the hassle of simulating the whole ride.</p>
+</div>
+<div class="paragraph">
+<p>Because we use serverless deployments, the services could be scaled to zero.
+This fact makes it a bit harder to listen to the application logs.
+We recommend using <a href="https://github.com/stern/stern"><code>stern</code> tool</a> to easily listen to both apps, even across scale to zero periods.</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">stern \
+  --namespace demo \
+  --container user-container \
+  '(legacy|drivers).*'</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Alternatively, you can use a regular <code>oc</code> command and a bit of scripting:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc logs \
+  --selector app=legacy \
+  --namespace demo \
+  --follow &amp;
+
+while [ $(oc get pod --namespace demo --selector app=drivers -o name | wc -l) -eq 0 ]; do \
+  sleep 1; done &amp;&amp; oc wait pod \
+  --namespace demo \
+  --selector app=drivers \
+  --for condition=Ready=True &amp;&amp; \
+  oc logs \
+  --selector app=drivers \
+  --namespace demo \
+  --follow</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the second terminal, call the legacy endpoint by sending a <em>POST</em> message like the following:</p>
+</div>
+<div class="listingblock console-input">
+<div class="content">
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">curl -Lk -v -X POST -H 'Content-Type: application/json' \
+  $(oc get ksvc legacy --namespace demo -o jsonpath='{.status.url}')/transits/8/complete \
+  --data-binary @- &lt;&lt; EOF
+{
+  "country": "Polska",
+  "city": "Warszawa",
+  "street": "Żytnia",
+  "buildingNumber": 32,
+  "hash": -580606919
+}
+EOF</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You should observe the cURL command succeeded, and return the ride data.
+Moreover, the logs of both applications should be updated.</p>
+</div>
+<div class="paragraph">
+<p>On the <em>Legacy</em> application you could see the log line, with shows the application is sending the <em>Cloud Event</em> to the <em>Event Mesh</em>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>INFO 1 --- [nio-8080-exec-1] i.l.cabs.common.cloudevents.Publisher    :
+Publishing event to http://broker-ingress.knative-eventing.svc.cluster.local/demo/default :
+CloudEvent{id='83720fe5-02ee-4a3e-9b22-5c287fb68d10',source=usvc://cabs/legacy,
+type='cabs.drivers.calculate-fee', datacontenttype='application/json',
+subject='4e630a96-4d5c-488c-a53b-9554c0bcb97e',time=2025-02-04T17:32:20.638351262Z,
+data=BytesCloudEventData{value=[123, 34, 100, 114, 105, 118, 101, 114, 45, 105,
+100, 34, 58, 49, 57, 57, 51, 52, 51, 50, 53, 53, 50, 44, 34, 116, 114, 97, 110,
+115, 105, 116, 45, 112, 114, 105, 99, 101, 34, 58, 53, 49, 48, 48, 125]},
+extensions={}}</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can notice the <code>cabs.drivers.calculate-fee</code> event was later routed to the <em>Drivers</em> service, which calculated the fee.
+After the fee was calculated, the <code>cabs.drivers.driver-fee</code> event was published back into the <em>Event Mesh</em>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>[INFO  drivers::app::events] Received event:
+    CloudEvent:
+      specversion: '1.0'
+      id: 'f94792bc-9c38-4db1-8da6-b6a28d1b4847'
+      type: 'cabs.drivers.calculate-fee'
+      source: 'usvc://cabs/legacy'
+      datacontenttype: 'application/json'
+      subject: '005be37e-8971-4a5b-b5e7-dd18de3c1184'
+      time: '2025-02-04T17:48:11.641317948+00:00'
+      knativearrivaltime: '2025-02-04T17:48:11.655926003Z'
+      Binary data: "{\"driver-id\":1993432552,\"transit-price\":5100}"
+
+[DEBUG drivers::drivers::service] fee event: Subject {
+ id: Some("005be37e-8971-4a5b-b5e7-dd18de3c1184"),
+ entity: CalculateFeeEvent {
+  driver_id: Identifier(1993432552),
+  transit_price: Money(5100) } }
+[DEBUG drivers::drivers::service] fee: Money(4856)
+[DEBUG drivers::support::cloudevents] sending cabs.drivers.driver-fee event to
+ http://broker-ingress.knative-eventing.svc.cluster.local/demo/default:
+  Event { attributes: V10(Attributes { id: "939babd7-6a85-4859-b45b-66087aba9418",
+   ty: "cabs.drivers.driver-fee", source: "usvc://cabs/drivers",
+   datacontenttype: Some("application/json"), dataschema: None,
+   subject: Some("005be37e-8971-4a5b-b5e7-dd18de3c1184"),
+   time: Some(2025-02-04T17:48:12.897943139Z) }),
+   data: Some(Json(Object {"driver-id": Number(1993432552), "fee": Number(4856)})),
+   extensions: {} }</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In the end, the <code>cabs.drivers.driver-fee</code> event was routed to the <em>Legacy</em> application, by <em>Event Mesh</em>.
+You could see the evidence of it in the logs.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>INFO 1 --- [nio-8080-exec-2] i.l.c.ride.details.TransitDetailsFacade  :
+ Driver fee calculated for transit 005be37e-8971-4a5b-b5e7-dd18de3c1184: 48.56</pre>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_in_depth_refactoring"><a class="anchor" href="#_in_depth_refactoring"></a><a class="link" href="#_in_depth_refactoring">4. In-depth look at the refactoring</a></h2>
+<div class="sectionbody">
 <div class="paragraph">
 <p>In this section, we&#8217;ll refactor the Cabs application.
 The refactoring will be limited to make the process easy to understand.
@@ -295,8 +767,8 @@ The calculation will be done asynchronously, and when the driver module publishe
 <div class="paragraph">
 <p>The base for the refactoring is the <em>Event Mesh</em> pattern, and the asynchronous communication will be done with <em>Cloud Events</em>.</p>
 </div>
-<div class="sect3">
-<h4 id="_drivers_module"><a class="anchor" href="#_drivers_module"></a><a class="link" href="#_drivers_module">1.2.1. Drivers module</a></h4>
+<div class="sect2">
+<h3 id="_drivers_module"><a class="anchor" href="#_drivers_module"></a><a class="link" href="#_drivers_module">4.1. Drivers module</a></h3>
 <div class="paragraph">
 <p>The functionality around drivers is already quite separated in the codebase, so it is a good staring point to extract into a separate module.
 The drivers module will become a standalone web service, deployed on the <em>Kubernetes</em> cluster.
@@ -446,8 +918,8 @@ The <em>sink</em> is the URL of the target, in this case the url of the <em>Even
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_event_mesh"><a class="anchor" href="#_event_mesh"></a><a class="link" href="#_event_mesh">1.2.2. Event Mesh</a></h4>
+<div class="sect2">
+<h3 id="_event_mesh"><a class="anchor" href="#_event_mesh"></a><a class="link" href="#_event_mesh">4.2. Event Mesh</a></h3>
 <div class="paragraph">
 <p>In this section, we&#8217;ll use the <em>Event Mesh</em> setup to communication between the extracted Drivers module and the different parts of the application.</p>
 </div>
@@ -515,8 +987,8 @@ Events captured in a back-up location can be re-transmitted into the <em>Event M
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_legacy_application_changes"><a class="anchor" href="#_legacy_application_changes"></a><a class="link" href="#_legacy_application_changes">1.2.3. Legacy application changes</a></h4>
+<div class="sect2">
+<h3 id="_legacy_application_changes"><a class="anchor" href="#_legacy_application_changes"></a><a class="link" href="#_legacy_application_changes">4.3. Legacy application changes</a></h3>
 <div class="paragraph">
 <p>The last part of the refactoring will be the changes needed in our legacy Java application.
 We need to remove the <em>Drivers</em> logic and send events to the <em>Event Mesh</em> instead.
@@ -714,8 +1186,8 @@ The domain events will be transmitted to the methods annotated with <code>@Event
 </table>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_the_wiring_of_our_event_mesh"><a class="anchor" href="#_the_wiring_of_our_event_mesh"></a><a class="link" href="#_the_wiring_of_our_event_mesh">1.2.4. The wiring of our <em>Event Mesh</em></a></h4>
+<div class="sect2">
+<h3 id="_the_wiring_of_our_event_mesh"><a class="anchor" href="#_the_wiring_of_our_event_mesh"></a><a class="link" href="#_the_wiring_of_our_event_mesh">4.4. The wiring of our <em>Event Mesh</em></a></h3>
 <div class="paragraph">
 <p>To complete the solution, we need to configure the <em>Event Mesh</em>.
 The configuration describes the rules for receiving and sending events from and to the <em>Event Mesh</em> and the application modules.</p>
@@ -767,7 +1239,8 @@ spec:
 We have two applications that will feed their events into the <em>Event Mesh</em>, so we need two <em>SinkBinding</em> resources.</p>
 </div>
 <div class="paragraph">
-<p>Lastly, we have to configure the <em>Broker</em> to send events from the <em>Event Mesh</em> to the expected application modules. We use the <em>Trigger</em> resource for this purpose.</p>
+<p>Lastly, we have to configure the <em>Broker</em> to send events from the <em>Event Mesh</em> to the expected application modules.
+We use the <em>Trigger</em> resource for this purpose.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -816,442 +1289,20 @@ spec:
 </div>
 </div>
 </div>
-<div class="sect2">
-<h3 id="_conclusion"><a class="anchor" href="#_conclusion"></a><a class="link" href="#_conclusion">1.3. Conclusion</a></h3>
-<div class="paragraph">
-<p>Let&#8217;s step back and take a look at our refactored code.
-The diagram below shows the sequence of operations that happen when we initiate our <code>+completeTransit()</code> method.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" alt="VP1DJiCm58JtFiMZ rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb rfgnpRIwWMVBC qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz mT YZS W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3 uuKpCNgB1JkEwQpzI FcjxoL5XgcUvdMioVL4soi iuIOQcE5N259RYPgKYMNJ 3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt" width="100%">
-</div>
-</div>
-<div class="paragraph">
-<p>The diagram illustrates the flow of events between the legacy application, the Knative <em>Event Mesh</em>, the fee calculator service, and the datastore.</p>
-</div>
-<div class="paragraph">
-<p>Next, you can learn how to walk through this demo.</p>
-</div>
-</div>
-</div>
 </div>
 <div class="sect1">
-<h2 id="_run_the_demonstration"><a class="anchor" href="#_run_the_demonstration"></a><a class="link" href="#_run_the_demonstration">2. Run the demonstration</a></h2>
+<h2 id="_conclusion"><a class="anchor" href="#_conclusion"></a><a class="link" href="#_conclusion">5. Conclusion</a></h2>
 <div class="sectionbody">
-<div class="sect2">
-<h3 id="_before_getting_started"><a class="anchor" href="#_before_getting_started"></a><a class="link" href="#_before_getting_started">2.1. Before getting started</a></h3>
 <div class="paragraph">
-<p>We&#8217;ll be using the Red Hat OpenShift Container Platform (OCP) 4.x cluster, so make sure you have it available in your environment.</p>
+<p>Let&#8217;s step back and take a look at what we have accomplished.</p>
 </div>
 <div class="paragraph">
-<p>You could use the <a href="https://developers.redhat.com/products/openshift/overview">Red Hat&#8217;s Developer Sandbox</a> to spin up an instance for you.</p>
+<p>The refactored application code fragment is now distributed, resilient, and eventually consistent.
+It will gracefully handle the failures that may happen while calculating the driver&#8217;s fee.
+The <em>Event Mesh</em> will make sure to retry the event delivery, in case of failures on either side.</p>
 </div>
 <div class="paragraph">
-<p>Alternatively, you can use the <a href="https://developers.redhat.com/products/openshift-local/overview">OpenShift Local</a> installation.
-Make sure to give it enough resources to fit the Serverless Operator and our demo application.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_installing_the_demo"><a class="anchor" href="#_installing_the_demo"></a><a class="link" href="#_installing_the_demo">2.2. Installing the demo</a></h3>
-<div class="sect3">
-<h4 id="_installing_the_serverless_operator"><a class="anchor" href="#_installing_the_serverless_operator"></a><a class="link" href="#_installing_the_serverless_operator">2.2.1. Installing the Serverless Operator</a></h4>
-<div class="paragraph">
-<p>To install the Serverless Operator, follow <a href="https://docs.openshift.com/serverless/1.35/install/preparing-serverless-install.html">the documentation steps</a>.</p>
-</div>
-<div class="paragraph">
-<p>The <strong>TL;DR</strong> version would be to apply the following manifest, and wait until the operator is ready:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
-kind: Namespace
-metadata:
-  name: openshift-serverless
----
-apiVersion: operators.coreos.com/v1
-kind: OperatorGroup
-metadata:
-  name: openshift-serverless
-  namespace: openshift-serverless
-spec: {}
----
-apiVersion: operators.coreos.com/v1alpha1
-kind: Subscription
-metadata:
-  name: serverless-operator
-  namespace: openshift-serverless
-spec:
-  channel: stable
-  name: serverless-operator
-  source: redhat-operators
-  sourceNamespace: openshift-marketplace</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Here are commands to apply the above manifests.</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">git clone https://github.com/cardil/cabs-usvc
-oc apply -f cabs-usvc/deploy/serverless/operator.yaml
-oc wait csv/serverless-operator.v1.35.0 \
-  --for 'jsonpath={.status.conditions[?(@.phase == "Succeeded")]}'</code></pre>
-</div>
-</div>
-<div class="admonitionblock caution">
-<table>
-<tr>
-<td class="icon">
-<i class="fa icon-caution" title="Caution"></i>
-</td>
-<td class="content">
-<div class="paragraph">
-<p>Replace the <code>v1.35.0</code> with the actual version of the Serverless Operator.</p>
-</div>
-</td>
-</tr>
-</table>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s the expected output</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">namespace/openshift-serverless created
-operatorgroup.operators.coreos.com/openshift-serverless created
-subscription.operators.coreos.com/serverless-operator created
-clusterserviceversion.operators.coreos.com/serverless-operator.v1.35.0 condition met</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_installing_the_serving_and_eventing_components"><a class="anchor" href="#_installing_the_serving_and_eventing_components"></a><a class="link" href="#_installing_the_serving_and_eventing_components">2.2.2. Installing the Serving and Eventing components</a></h4>
-<div class="paragraph">
-<p>To install the Serving and Eventing components, follow <a href="https://docs.openshift.com/serverless/1.35/install/installing-knative-serving.html">the Serving documentation steps</a> and <a href="https://docs.openshift.com/serverless/1.35/install/installing-knative-eventing.html">the Eventing documentation steps</a>.</p>
-</div>
-<div class="paragraph">
-<p>Again for <strong>TL;DR</strong> version for small, development purposes, you could apply the following manifests, and wait until the components are ready for operation:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-yaml hljs" data-lang="yaml">apiVersion: v1
-kind: Namespace
-metadata:
-  name: knative-serving
----
-apiVersion: operator.knative.dev/v1beta1
-kind: KnativeServing
-metadata:
-  name: knative-serving
-  namespace: knative-serving
-spec:
-  high-availability:
-    replicas: 1
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: knative-eventing
----
-apiVersion: operator.knative.dev/v1beta1
-kind: KnativeEventing
-metadata:
-  name: knative-eventing
-  namespace: knative-eventing
-spec:
-  high-availability:
-    replicas: 1</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Here are commands to apply the above manifests.</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc apply \
-  -f cabs-usvc/deploy/serverless/serving.yaml \
-  -f cabs-usvc/deploy/serverless/eventing.yaml
-
-oc wait knativeserving/knative-serving \
-  --namespace knative-serving \
-  --for 'condition=Ready=True'
-oc wait knativeeventing/knative-eventing \
-  --namespace knative-eventing \
-  --for 'condition=Ready=True'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s the expected output</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">Warning: resource namespaces/knative-serving is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by oc apply. oc apply should only be used on resources created declaratively by either oc create --save-config or oc apply. The missing annotation will be patched automatically.
-namespace/knative-serving configured
-knativeserving.operator.knative.dev/knative-serving created
-Warning: resource namespaces/knative-eventing is missing the kubectl.kubernetes.io/last-applied-configuration annotation which is required by oc apply. oc apply should only be used on resources created declaratively by either oc create --save-config or oc apply. The missing annotation will be patched automatically.
-namespace/knative-eventing configured
-knativeeventing.operator.knative.dev/knative-eventing created
-knativeserving.operator.knative.dev/knative-serving condition met
-knativeeventing.operator.knative.dev/knative-eventing condition met</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_installing_the_demo_applications"><a class="anchor" href="#_installing_the_demo_applications"></a><a class="link" href="#_installing_the_demo_applications">2.2.3. Installing the demo applications</a></h4>
-<div class="paragraph">
-<p>To install the Demo application, apply the following manifests.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/legacy.yaml">The legacy application</a></p>
-</li>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/db/redis.yaml">The Drivers database</a></p>
-</li>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/drivers.yaml">The Drivers module</a></p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Here are commands to apply the above manifests.</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc create ns demo
-oc apply \
-  -f cabs-usvc/deploy/db/redis.yaml \
-  -f cabs-usvc/deploy/apps/drivers.yaml \
-  -f cabs-usvc/deploy/apps/legacy.yaml
-
-oc wait ksvc/drivers \
-  --namespace demo \
-  --for condition=Ready=True
-oc wait ksvc/legacy \
-  --namespace demo \
-  --for condition=Ready=True</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s the expected output</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">namespace/demo created
-pod/redis created
-service/redis created
-service.serving.knative.dev/drivers created
-service.serving.knative.dev/legacy created
-service.serving.knative.dev/drivers condition met
-service.serving.knative.dev/legacy condition met</code></pre>
-</div>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_configuring_the_event_mesh"><a class="anchor" href="#_configuring_the_event_mesh"></a><a class="link" href="#_configuring_the_event_mesh">2.2.4. Configuring the Event Mesh</a></h4>
-<div class="paragraph">
-<p>To configure the Event Mesh, apply the following manifests.</p>
-</div>
-<div class="ulist">
-<ul>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/broker.yaml"><em>Broker</em></a></p>
-</li>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/sources.yaml">Sources</a></p>
-</li>
-<li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/triggers.yaml">Triggers</a></p>
-</li>
-</ul>
-</div>
-<div class="paragraph">
-<p>Here are commands to apply the above manifests.</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc apply \
-  -f cabs-usvc/deploy/mesh/broker.yaml \
-  -f cabs-usvc/deploy/mesh/sources.yaml \
-  -f cabs-usvc/deploy/mesh/triggers.yaml
-
-oc wait broker/default \
-  --namespace demo \
-  --for condition=Ready=True
-oc wait sinkbinding/drivers-binding \
-  --namespace demo \
-  --for condition=Ready=True
-oc wait sinkbinding/legacy-binding \
-  --namespace demo \
-  --for condition=Ready=True
-oc wait trigger/trg-drivers \
-  --namespace demo \
-  --for condition=Ready=True
-oc wait trigger/trg-drivers \
-  --namespace demo \
-  --for condition=Ready=True</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s the expected output</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">broker.eventing.knative.dev/default created
-sinkbinding.sources.knative.dev/drivers-binding created
-sinkbinding.sources.knative.dev/legacy-binding created
-trigger.eventing.knative.dev/trg-drivers created
-trigger.eventing.knative.dev/trg-legacy created
-broker.eventing.knative.dev/default condition met
-sinkbinding.sources.knative.dev/drivers-binding condition met
-sinkbinding.sources.knative.dev/legacy-binding condition met
-trigger.eventing.knative.dev/trg-drivers condition met
-trigger.eventing.knative.dev/trg-drivers condition met</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The OpenShift Container Platform provides can provide a clear visualization of our deployed solution.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="_images/solution-odc.png" alt="solution odc" width="100%">
-</div>
-</div>
-<div class="paragraph">
-<p>The console shows two sink bindings on the left, and they are feeding the events from the applications to the <em>Broker</em> (depicted in the center).
-The <em>Broker</em> is the centralized infrastructure piece that ensures a proper decoupling of the services.
-On the right, you could see the two applications deployed as <em>Knative</em> services, and two triggers (as lines) that configure the <em>Event Mesh</em> to feed appropriate events to the applications.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_walkthrough_guide"><a class="anchor" href="#_walkthrough_guide"></a><a class="link" href="#_walkthrough_guide">2.3. Walkthrough guide</a></h3>
-<div class="paragraph">
-<p>With the demo pieces deployed on the cluster, we could go ahead with testing the functionality.</p>
-</div>
-<div class="paragraph">
-<p>For the sake of brevity, the legacy application, at startup, prepares some development data in the in-memory database its running on.
-We will leverage that data to complete transit without the hassle of simulating the whole ride.</p>
-</div>
-<div class="paragraph">
-<p>Because we use serverless deployments, the services could be scaled to zero.
-This fact makes it a bit harder to listen to the application logs.
-We recommend using <a href="https://github.com/stern/stern"><code>stern</code> tool</a> to easily listen to both apps, even across scale to zero periods.</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">stern \
-  --namespace demo \
-  --container user-container \
-  '(legacy|drivers).*'</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Alternatively, you can use a regular <code>oc</code> command and a bit of scripting:</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">oc logs \
-  --selector app=legacy \
-  --namespace demo \
-  --follow &amp;
-
-while [ $(oc get pod --namespace demo --selector app=drivers -o name | wc -l) -eq 0 ]; do \
-  sleep 1; done &amp;&amp; oc wait pod \
-  --namespace demo \
-  --selector app=drivers \
-  --for condition=Ready=True &amp;&amp; \
-  oc logs \
-  --selector app=drivers \
-  --namespace demo \
-  --follow</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>In the second terminal, call the legacy endpoint by sending a <em>POST</em> message like the following:</p>
-</div>
-<div class="listingblock console-input">
-<div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">curl -Lk -v -X POST -H 'Content-Type: application/json' \
-  $(oc get ksvc legacy --namespace demo -o jsonpath='{.status.url}')/transits/8/complete \
-  --data-binary @- &lt;&lt; EOF
-{
-  "country": "Polska",
-  "city": "Warszawa",
-  "street": "Żytnia",
-  "buildingNumber": 32,
-  "hash": -580606919
-}
-EOF</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You should observe the cURL command succeeded, and return the ride data.
-Moreover, the logs of both applications should be updated.</p>
-</div>
-<div class="paragraph">
-<p>On the <em>Legacy</em> application you could see the log line, with shows the application is sending the <em>Cloud Event</em> to the <em>Event Mesh</em>:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre>INFO 1 --- [nio-8080-exec-1] i.l.cabs.common.cloudevents.Publisher    :
-Publishing event to http://broker-ingress.knative-eventing.svc.cluster.local/demo/default :
-CloudEvent{id='83720fe5-02ee-4a3e-9b22-5c287fb68d10',source=usvc://cabs/legacy,
-type='cabs.drivers.calculate-fee', datacontenttype='application/json',
-subject='4e630a96-4d5c-488c-a53b-9554c0bcb97e',time=2025-02-04T17:32:20.638351262Z,
-data=BytesCloudEventData{value=[123, 34, 100, 114, 105, 118, 101, 114, 45, 105,
-100, 34, 58, 49, 57, 57, 51, 52, 51, 50, 53, 53, 50, 44, 34, 116, 114, 97, 110,
-115, 105, 116, 45, 112, 114, 105, 99, 101, 34, 58, 53, 49, 48, 48, 125]},
-extensions={}}</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You can notice the <code>cabs.drivers.calculate-fee</code> event was later routed to the <em>Drivers</em> service, which calculated the fee.
-After the fee was calculated, the <code>cabs.drivers.driver-fee</code> event was published back into the <em>Event Mesh</em>.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre>[INFO  drivers::app::events] Received event:
-    CloudEvent:
-      specversion: '1.0'
-      id: 'f94792bc-9c38-4db1-8da6-b6a28d1b4847'
-      type: 'cabs.drivers.calculate-fee'
-      source: 'usvc://cabs/legacy'
-      datacontenttype: 'application/json'
-      subject: '005be37e-8971-4a5b-b5e7-dd18de3c1184'
-      time: '2025-02-04T17:48:11.641317948+00:00'
-      knativearrivaltime: '2025-02-04T17:48:11.655926003Z'
-      Binary data: "{\"driver-id\":1993432552,\"transit-price\":5100}"
-
-[DEBUG drivers::drivers::service] fee event: Subject {
- id: Some("005be37e-8971-4a5b-b5e7-dd18de3c1184"),
- entity: CalculateFeeEvent {
-  driver_id: Identifier(1993432552),
-  transit_price: Money(5100) } }
-[DEBUG drivers::drivers::service] fee: Money(4856)
-[DEBUG drivers::support::cloudevents] sending cabs.drivers.driver-fee event to
- http://broker-ingress.knative-eventing.svc.cluster.local/demo/default:
-  Event { attributes: V10(Attributes { id: "939babd7-6a85-4859-b45b-66087aba9418",
-   ty: "cabs.drivers.driver-fee", source: "usvc://cabs/drivers",
-   datacontenttype: Some("application/json"), dataschema: None,
-   subject: Some("005be37e-8971-4a5b-b5e7-dd18de3c1184"),
-   time: Some(2025-02-04T17:48:12.897943139Z) }),
-   data: Some(Json(Object {"driver-id": Number(1993432552), "fee": Number(4856)})),
-   extensions: {} }</pre>
-</div>
-</div>
-<div class="paragraph">
-<p>In the end, the <code>cabs.drivers.driver-fee</code> event was routed to the <em>Legacy</em> application, by <em>Event Mesh</em>.
-You could see the evidence of it in the logs.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre>INFO 1 --- [nio-8080-exec-2] i.l.c.ride.details.TransitDetailsFacade  :
- Driver fee calculated for transit 005be37e-8971-4a5b-b5e7-dd18de3c1184: 48.56</pre>
-</div>
-</div>
+<p>We could extend the refactoring, even further, with the same principle, making the whole application modern, responsible, and without incorrect, unnecessary, transactional behavior.</p>
 </div>
 </div>
 </div>

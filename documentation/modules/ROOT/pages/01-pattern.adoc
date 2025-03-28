@@ -1,3 +1,4 @@
+[#_the_story]
 == The story behind this solution pattern
 
 Cabs is a fictional transportation company.
@@ -11,6 +12,7 @@ This solution addresses inefficiencies and aligns distributed systems with real-
 The team had figured out they could leverage the https://martinfowler.com/bliki/CQRS.html[_CQRS_] pattern together with _Knative's Event Mesh_
 to modernize their application in a non-extrusive way.
 
+[#_the_solution]
 == The Solution
 
 The core of this solution is an event mesh -- a dynamic, flexible infrastructure layer that routes, retries, and processes asynchronous events across distributed components.

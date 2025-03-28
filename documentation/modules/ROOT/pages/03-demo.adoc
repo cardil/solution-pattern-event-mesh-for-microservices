@@ -5,13 +5,12 @@
 
 = See the Solution in Action
 
-== Demonstration
-
 Let's take a look at the following example.
 We'll be looking at a Cabs ride-sharing application, that resembles real-world solutions of similar kind.
 The application is written in a popular Java framework.
 
-=== Initial application
+[#_initial_application]
+== Initial application
 
 [IMPORTANT]
 ====
@@ -64,7 +63,7 @@ Similar methods are, unfortunately, quite common in business applications.
 At first glance, many developers don't see any problems with similar code.
 Let's break down the problems in detail.
 
-==== Overuse of transactional processing
+=== Overuse of transactional processing
 
 The transactional processing has been the cornerstone of many business applications.
 However, in most cases, the transactional processing isn't the best fit for real-world processes.
@@ -80,7 +79,7 @@ Outages from the dependant services must not invalidate the main intent.
 In fact, all the operations in this example could happen independently, and at different, yet reasonable times.
 ====
 
-==== Bundling of different logical domains
+=== Bundling of different logical domains
 
 Our example is also very chatty, and hard to understand at first glance.
 In fact, this is quite common in similar applications.
@@ -90,9 +89,10 @@ When new features are added, it keeps growing as developers cramp new instructio
 Of course, the developers could re-architect the code, to extract instructions to a separate blocks, but that is just a half-measure.
 Still, the application will do all the operations, starting from `+completeTransit+` method in the same time, and withing the same _"script"_.
 
-=== Refactoring
+[#_refactoring_plan]
+== Refactoring plan
 
-In this section, we'll refactor the Cabs application.
+In this section, we'll plan the refactoring of the Cabs application.
 The refactoring will be limited to make the process easy to understand.
 The scope of the refactoring will be the extraction of drivers module, which is already a separate domain in the codebase.
 Within the scope of the `+completeTransit+` method, we'll need to shift the way we calculate the fee for the driver.
@@ -100,405 +100,12 @@ The calculation will be done asynchronously, and when the driver module publishe
 
 The base for the refactoring is the _Event Mesh_ pattern, and the asynchronous communication will be done with _Cloud Events_.
 
-==== Drivers module
+After the refactoring, the `+completeTransit+` code will use two event types:
 
-The functionality around drivers is already quite separated in the codebase, so it is a good staring point to extract into a separate module.
-The drivers module will become a standalone web service, deployed on the _Kubernetes_ cluster.
-The implementation of the drivers module will be done with _Rust_ for this example.
+* `+CalculateFee+` -- a command event, to calculate fee for the driver for given ride
+* `+DriverFeeCalculated+` -- an information event, fired when the calculator does the logic to calculate the requested fee.
 
-Here's the _Rust_ code for calculate fee functionality.
-The entrypoint is the _Cloud Event_ of type `cabs.drivers.calculate-fee` we are expecting the _Event Mesh_ will route.
-
-[source,rust]
-----
-impl Service {
-  pub async fn calculate_fee(&mut self, ce: Event) -> Result<()> {
-    let calc_fee_intent = Self::unwrap_calculatefee(ce)?; // <1>
-    let subject = calc_fee_intent.id.clone();
-
-    log::debug!("calculate fee for: {:?}", calc_fee_intent);
-    let drv = self.repo.get(&calc_fee_intent.entity.driver_id).await?;
-
-    let fee = drv.calculate_fee(&calc_fee_intent.entity.transit_price); // <2>
-
-    log::debug!("fee value: {:?}", fee);
-
-    let driverfee_event = DriverFeeEvent {
-        driver_id: calc_fee_intent.entity.driver_id,
-        fee,
-    }; // <3>
-
-    let mut builder = driverfee_event.to_builder(); // <3>
-    if let Some(id) = subject {
-        builder = builder.subject(id);
-    } // <3>
-    let ce = builder.build().map_err(error::ErrorInternalServerError)?; // <3>
-
-    Sender::new(&self.config).send(ce).await?; // <4>
-
-    Ok(())
-  }
-  // [..]
-}
-----
-
-In the above code, we are doing the following:
-
-<1> We are unwrapping _Cloud Event_ envelope into an internal, domain, fee value object.
-<2> We are calculating the fee value using some domain logic.
-<3> We are wrapping the calculated fee value into a new _Cloud Event_.
-<4> We are sending the fee, as _Cloud Event_, back to the _Event Mesh_ using _HTTP REST_ client.
-
-Of course, in order for this method to be called, we need to route the event from the HTTP listener:
-
-[source,rust]
-----
-pub fn routes() -> impl HttpServiceFactory + 'static {
-    web::resource("/").route(web::post().to(recv))
-}
-
-async fn recv(
-    ce: Event,
-    state: web::Data<State>,
-    binding: web::Data<Binding>,
-) -> Result<HttpResponse> {
-    log::info!("Received event:\n{}", ce);
-
-    let mut svc = service::new(state, binding).await?;
-
-    match ce.ty() {
-        "cabs.drivers.calculate-fee" => svc.calculate_fee(ce).await,
-        _ => Err(error::ErrorBadRequest("unsupported event type")),
-    }?;
-
-    Ok(HttpResponse::Ok().finish())
-}
-----
-
-[NOTE]
-====
-The example above uses a simple switch statement to determine the route for the given type of the event.
-In a real application, you would probably use a more complex logic to determine which method should be called.
-====
-
-Let's see also the _Cloud Event_ sender, that uses the _HTTP REST_ client to send events to the _Event Mesh_:
-
-[source,rust]
-----
-impl Sender {
-    pub async fn send(&self, ce: Event) -> Result<()> {
-        log::debug!("sending {} event to {}:\n{:?}", ce.ty(), &self.sink, ce,);
-
-        let response = self
-            .client
-            .post(&self.sink) // <1>
-            .event(ce)
-            .map_err(error::ErrorInternalServerError)?
-            .send()
-            .await
-            .map_err(error::ErrorInternalServerError)?;
-
-        match response.status().is_success() {
-            true => Ok(()),
-            false => {
-                log::error!("failed to send event: {:#?}", response);
-                Err(error::ErrorInternalServerError(format!(
-                    "failed to send event: {}",
-                    response.status()
-                )))
-            }
-        }
-    }
-}
-----
-
-<1> The client uses _POST_ method, to send the _JSON_ representation of the event to the sink.
-The _sink_ is the URL of the target, in this case the url of the _Event Mesh_.
-
-==== Event Mesh
-
-In this section, we'll use the _Event Mesh_ setup to communication between the extracted Drivers module and the different parts of the application.
-
-Here's the configuration of the _Event Mesh_'s central component, the _Broker_, which will be used in this example.
-The _Broker_ here is the _Knative_ component, and will be deployed in the _Kubernetes_ cluster.
-
-[source,yaml]
-----
-apiVersion: eventing.knative.dev/v1
-kind: Broker
-metadata:
-  name: default
-  namespace: demo
-spec:
-  delivery:
-    backoffDelay: PT0.2S # <1>
-    backoffPolicy: exponential # <2>
-    retry: 10 # <3>
-----
-
-<1> The `+backoffDelay+` is the delay between retries, and us use `+200ms+` initially.
-<2> The `+backoffPolicy+` is set to `+exponential+`, which means that the delay will be doubled each time.
-<3> The `+retry+` is the number of times we retry before giving up.
-
-[IMPORTANT]
-====
-In our example, the policy is `+exponential+`, and the `+retry+` is 10, which means that after approximately 6 min and 50 sec the event will be dropped (or routed to the `+deadLetterSink+` if configured).
-====
-
-[NOTE]
-====
-A `+deadLetterSink+` option could be configured for the _Broker_ to send the events that failed to be delivered in time to a back-up location.
-Events captured in a back-up location can be re-transmitted into the _Event Mesh_ later by reconfiguring the _Mesh_ (after resolving the outage or deploying a bug fix).
-====
-
-==== Legacy application changes
-
-The last part of the refactoring will be the changes needed in our legacy Java application.
-We need to remove the _Drivers_ logic and send events to the _Event Mesh_ instead.
-We also need to accept new events coming from the _Event Mesh_, as the calculated fee will be transmitted as such.
-
-Here's the refactored code:
-[source,java]
-----
-public void completeTransit(UUID requestUUID, AddressDTO destinationAddress) {
-    // ...
-    Money finalPrice = completeTransitService.completeTransit(driverId, requestUUID, from, to);
-    // ...
-    driverFeeService.calculateDriverFee(requestUUID, finalPrice, driverId); // <1>
-    // ...
-}
-
-@EventListener // <2>
-public void driverFeeCalculated(DriverFee driverFee) { // <3>
-    Objects.requireNonNull(driverFee.ctx.getSubject());
-    UUID id = UUID.fromString(driverFee.ctx.getSubject());
-    transitDetailsFacade.driverFeeCalculated(id, driverFee.data.fee);
-}
-----
-
-[NOTE]
-====
-<1> Notice, we are just invoking the `+calculateDriverFee+`, that doesn't return anything.
-It's asynchronous.
-<2> We are using the `@EventListener` annotation to listen for the domain events within the application.
-Don't confuse this with _Cloud Events_ that are sent and received outside the application.
-<3> The exact fee is calculated by the _Drivers_ module, and we'll be notified later, with the `+driverFeeCalculated+` method.
-====
-
-To communicate with the _Event Mesh_, we need to add a new _Cloud Event_ sender and listener.
-That's being done similarly, as in the case of _Rust_ application.
-
-Below, you can see how you may implement the _Cloud Event_ sender:
-
-[source,java]
-----
-@Service
-public class DriverFeeService {
-
-    private final CloudEventSender eventSender;
-
-    @Autowired
-    public DriverFeeService(EventSender eventSender) {
-        this.eventSender = eventSender;
-    }
-
-    public void calculateDriverFee(UUID rideId, Money transitPrice, Long driverId) {
-        eventSender.send(new CalculateFee(
-            rideId,
-            driverId,
-            transitPrice.toInt()
-        ));
-    }
-}
-
-@Service
-public class CloudEventSender {
-
-  private static final Logger log = LoggerFactory.getLogger(EventSender.class);
-
-  private final KnativeConfig knative;
-  private final List<Into<?>> converters;
-
-  @Autowired
-  CloudEventSender(KnativeConfig knative, List<Into<?>> converters) {
-    this.knative = knative;
-    this.converters = converters;
-  }
-
-  public void send(Object event) {
-    try {
-      unsafeSend(event);
-    } catch (IOException e) {
-      throw new UncheckedIOException(e);
-    }
-  }
-
-  private <T> void unsafeSend(T event) throws IOException {
-    Into<T> convert = (Into<T>) converters.stream()
-        .filter(c -> c.accepts(event))
-        .findFirst()
-        .orElseThrow(() -> new IllegalArgumentException(
-          "Cannot find converter for " + event.getClass()));
-    CloudEvent ce = convert.into(event);
-    URL url = knative.getSink();
-    log.info("Publishing event to {} : {}", url, ce);
-    HttpURLConnection http = (HttpURLConnection) url.openConnection();
-    http.setRequestMethod("POST");
-    http.setDoOutput(true);
-    http.setDoInput(true);
-
-    HttpMessageWriter messageWriter = createMessageWriter(http);
-    messageWriter.writeBinary(ce);
-
-    int code = http.getResponseCode();
-    if (code < 200 || code >= 300) {
-      throw new IOException("Unexpected response code " + code);
-    }
-  }
-}
-----
-
-Once again, notice this is just a simple _HTTP_ client doing the _POST_ request, with the body being the JSON representation of the _CloudEvent_.
-
-The last part to see is the _HTTP_ listener on the legacy application side.
-This listener will be responsible for receiving events from _Knative's Event Mesh_ and converting them into our custom event type:
-
-[source,java]
-----
-@RestController
-public class CloudEventReceiver {
-  private static final Logger log = LoggerFactory.getLogger(Receiver.class);
-
-  private final EventsPublisher eventsPublisher;
-  private final List<From<?>> froms;
-
-  @Autowired
-  Receiver(EventsPublisher eventsPublisher, List<From<?>> froms) {
-    this.eventsPublisher = eventsPublisher;
-    this.froms = froms;
-  }
-
-  @PostMapping("/")
-  public void receive(@RequestBody CloudEvent event) {
-    log.info("Received event: {}", event);
-
-    for (From<?> from : froms) {
-      if (from.matches(event)) {
-        Event ev = from.fromCloudEvent(event); // <1>
-        eventsPublisher.publish(ev); // <2>
-        return;
-      }
-    }
-
-    throw new IllegalStateException("No matching event type consumer found");
-  }
-}
-----
-
-<1> We unwrap the _CloudEvent_ into our domain event type (in the example that's the `+DriverFeeCalculated+` type)
-<2> And publish it withing the application, using the framework's _EventsPublisher_ implementation.
-The domain events will be transmitted to the methods annotated with `@EventListener`.
-
-[CAUTION]
-====
-Don't confuse the framework's _EventsPublisher_ with _Cloud Event_ sender and receiver.
-====
-
-==== The wiring of our _Event Mesh_
-
-To complete the solution, we need to configure the _Event Mesh_.
-The configuration describes the rules for receiving and sending events from and to the _Event Mesh_ and the application modules.
-
-Here are the sources in our case:
-
-[source,yaml]
-----
-apiVersion: sources.knative.dev/v1
-kind: SinkBinding
-metadata:
-  name: drivers-binding
-  namespace: demo
-spec:
-  sink:
-    ref:
-      apiVersion: eventing.knative.dev/v1
-      kind: Broker
-      name: default
-      namespace: demo
-  subject:
-    apiVersion: serving.knative.dev/v1
-    kind: Service
-    name: drivers
-    namespace: demo
----
-apiVersion: sources.knative.dev/v1
-kind: SinkBinding
-metadata:
-  name: legacy-binding
-  namespace: demo
-spec:
-  sink:
-    ref:
-      apiVersion: eventing.knative.dev/v1
-      kind: Broker
-      name: default
-      namespace: demo
-  subject:
-    apiVersion: serving.knative.dev/v1
-    kind: Service
-    name: legacy
-    namespace: demo
-----
-
-We are using the _SinkBinding_ resource to bind an event source (the _Service_) with an event sink (_Broker_).
-We have two applications that will feed their events into the _Event Mesh_, so we need two _SinkBinding_ resources.
-
-Lastly, we have to configure the _Broker_ to send events from the _Event Mesh_ to the expected application modules. We use the _Trigger_ resource for this purpose.
-
-[source,yaml]
-----
-apiVersion: eventing.knative.dev/v1
-kind: Trigger
-metadata:
-  name: trg-drivers
-  namespace: demo
-spec:
-  broker: default
-  filter:
-    attributes:
-      type: cabs.drivers.calculate-fee # <1>
-  subscriber:
-    ref:
-      apiVersion: serving.knative.dev/v1
-      kind: Service
-      name: drivers
-      namespace: demo
----
-apiVersion: eventing.knative.dev/v1
-kind: Trigger
-metadata:
-  name: trg-legacy
-  namespace: demo
-spec:
-  broker: default
-  filter:
-    attributes:
-      type: cabs.drivers.driver-fee # <1>
-  subscriber:
-    ref:
-      apiVersion: serving.knative.dev/v1
-      kind: Service
-      name: legacy
-      namespace: demo
-----
-
-<1> Note, we specify the type of the event, as a filter.
-
-
-=== Conclusion
-
-Let's step back and take a look at our refactored code.
-The diagram below shows the sequence of operations that happen when we initiate our `+completeTransit()` method.
+The diagram below shows the sequence of operations that happen when we initiate refactored `+completeTransit+` code.
 
 image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
 
@@ -530,11 +137,12 @@ deactivate Legacy
 @enduml
 ////
 
-The diagram illustrates the flow of events between the legacy application, the Knative _Event Mesh_, the fee calculator service, and the datastore.
+The diagram illustrates the flow of events between the legacy application, the _Knative Event Mesh_, the fee calculator service, and the datastore.
+
+[#_run_this_demonstration]
+== Run this demonstration
 
 Next, you can learn how to walk through this demo.
-
-== Run the demonstration
 
 === Before getting started
 
@@ -776,7 +384,7 @@ On the right, you could see the two applications deployed as _Knative_ services,
 
 With the demo pieces deployed on the cluster, we could go ahead with testing the functionality.
 
-For the sake of brevity, the legacy application, at startup, prepares some development data in the in-memory database its running on. 
+For the sake of brevity, the legacy application, at startup, prepares some development data in the in-memory database its running on.
 We will leverage that data to complete transit without the hassle of simulating the whole ride.
 
 Because we use serverless deployments, the services could be scaled to zero.
@@ -888,3 +496,423 @@ You could see the evidence of it in the logs.
 INFO 1 --- [nio-8080-exec-2] i.l.c.ride.details.TransitDetailsFacade  :
  Driver fee calculated for transit 005be37e-8971-4a5b-b5e7-dd18de3c1184: 48.56
 ----
+
+[#_in_depth_refactoring]
+== In-depth look at the refactoring 
+
+In this section, we'll refactor the Cabs application.
+The refactoring will be limited to make the process easy to understand.
+The scope of the refactoring will be the extraction of drivers module, which is already a separate domain in the codebase.
+Within the scope of the `+completeTransit+` method, we'll need to shift the way we calculate the fee for the driver.
+The calculation will be done asynchronously, and when the driver module publishes the calculation result, it will be saved back into the database.
+
+The base for the refactoring is the _Event Mesh_ pattern, and the asynchronous communication will be done with _Cloud Events_.
+
+=== Drivers module
+
+The functionality around drivers is already quite separated in the codebase, so it is a good staring point to extract into a separate module.
+The drivers module will become a standalone web service, deployed on the _Kubernetes_ cluster.
+The implementation of the drivers module will be done with _Rust_ for this example.
+
+Here's the _Rust_ code for calculate fee functionality.
+The entrypoint is the _Cloud Event_ of type `cabs.drivers.calculate-fee` we are expecting the _Event Mesh_ will route.
+
+[source,rust]
+----
+impl Service {
+  pub async fn calculate_fee(&mut self, ce: Event) -> Result<()> {
+    let calc_fee_intent = Self::unwrap_calculatefee(ce)?; // <1>
+    let subject = calc_fee_intent.id.clone();
+
+    log::debug!("calculate fee for: {:?}", calc_fee_intent);
+    let drv = self.repo.get(&calc_fee_intent.entity.driver_id).await?;
+
+    let fee = drv.calculate_fee(&calc_fee_intent.entity.transit_price); // <2>
+
+    log::debug!("fee value: {:?}", fee);
+
+    let driverfee_event = DriverFeeEvent {
+        driver_id: calc_fee_intent.entity.driver_id,
+        fee,
+    }; // <3>
+
+    let mut builder = driverfee_event.to_builder(); // <3>
+    if let Some(id) = subject {
+        builder = builder.subject(id);
+    } // <3>
+    let ce = builder.build().map_err(error::ErrorInternalServerError)?; // <3>
+
+    Sender::new(&self.config).send(ce).await?; // <4>
+
+    Ok(())
+  }
+  // [..]
+}
+----
+
+In the above code, we are doing the following:
+
+<1> We are unwrapping _Cloud Event_ envelope into an internal, domain, fee value object.
+<2> We are calculating the fee value using some domain logic.
+<3> We are wrapping the calculated fee value into a new _Cloud Event_.
+<4> We are sending the fee, as _Cloud Event_, back to the _Event Mesh_ using _HTTP REST_ client.
+
+Of course, in order for this method to be called, we need to route the event from the HTTP listener:
+
+[source,rust]
+----
+pub fn routes() -> impl HttpServiceFactory + 'static {
+    web::resource("/").route(web::post().to(recv))
+}
+
+async fn recv(
+    ce: Event,
+    state: web::Data<State>,
+    binding: web::Data<Binding>,
+) -> Result<HttpResponse> {
+    log::info!("Received event:\n{}", ce);
+
+    let mut svc = service::new(state, binding).await?;
+
+    match ce.ty() {
+        "cabs.drivers.calculate-fee" => svc.calculate_fee(ce).await,
+        _ => Err(error::ErrorBadRequest("unsupported event type")),
+    }?;
+
+    Ok(HttpResponse::Ok().finish())
+}
+----
+
+[NOTE]
+====
+The example above uses a simple switch statement to determine the route for the given type of the event.
+In a real application, you would probably use a more complex logic to determine which method should be called.
+====
+
+Let's see also the _Cloud Event_ sender, that uses the _HTTP REST_ client to send events to the _Event Mesh_:
+
+[source,rust]
+----
+impl Sender {
+    pub async fn send(&self, ce: Event) -> Result<()> {
+        log::debug!("sending {} event to {}:\n{:?}", ce.ty(), &self.sink, ce,);
+
+        let response = self
+            .client
+            .post(&self.sink) // <1>
+            .event(ce)
+            .map_err(error::ErrorInternalServerError)?
+            .send()
+            .await
+            .map_err(error::ErrorInternalServerError)?;
+
+        match response.status().is_success() {
+            true => Ok(()),
+            false => {
+                log::error!("failed to send event: {:#?}", response);
+                Err(error::ErrorInternalServerError(format!(
+                    "failed to send event: {}",
+                    response.status()
+                )))
+            }
+        }
+    }
+}
+----
+
+<1> The client uses _POST_ method, to send the _JSON_ representation of the event to the sink.
+The _sink_ is the URL of the target, in this case the url of the _Event Mesh_.
+
+=== Event Mesh
+
+In this section, we'll use the _Event Mesh_ setup to communication between the extracted Drivers module and the different parts of the application.
+
+Here's the configuration of the _Event Mesh_'s central component, the _Broker_, which will be used in this example.
+The _Broker_ here is the _Knative_ component, and will be deployed in the _Kubernetes_ cluster.
+
+[source,yaml]
+----
+apiVersion: eventing.knative.dev/v1
+kind: Broker
+metadata:
+  name: default
+  namespace: demo
+spec:
+  delivery:
+    backoffDelay: PT0.2S # <1>
+    backoffPolicy: exponential # <2>
+    retry: 10 # <3>
+----
+
+<1> The `+backoffDelay+` is the delay between retries, and us use `+200ms+` initially.
+<2> The `+backoffPolicy+` is set to `+exponential+`, which means that the delay will be doubled each time.
+<3> The `+retry+` is the number of times we retry before giving up.
+
+[IMPORTANT]
+====
+In our example, the policy is `+exponential+`, and the `+retry+` is 10, which means that after approximately 6 min and 50 sec the event will be dropped (or routed to the `+deadLetterSink+` if configured).
+====
+
+[NOTE]
+====
+A `+deadLetterSink+` option could be configured for the _Broker_ to send the events that failed to be delivered in time to a back-up location.
+Events captured in a back-up location can be re-transmitted into the _Event Mesh_ later by reconfiguring the _Mesh_ (after resolving the outage or deploying a bug fix).
+====
+
+=== Legacy application changes
+
+The last part of the refactoring will be the changes needed in our legacy Java application.
+We need to remove the _Drivers_ logic and send events to the _Event Mesh_ instead.
+We also need to accept new events coming from the _Event Mesh_, as the calculated fee will be transmitted as such.
+
+Here's the refactored code:
+
+[source,java]
+----
+public void completeTransit(UUID requestUUID, AddressDTO destinationAddress) {
+    // ...
+    Money finalPrice = completeTransitService.completeTransit(driverId, requestUUID, from, to);
+    // ...
+    driverFeeService.calculateDriverFee(requestUUID, finalPrice, driverId); // <1>
+    // ...
+}
+
+@EventListener // <2>
+public void driverFeeCalculated(DriverFee driverFee) { // <3>
+    Objects.requireNonNull(driverFee.ctx.getSubject());
+    UUID id = UUID.fromString(driverFee.ctx.getSubject());
+    transitDetailsFacade.driverFeeCalculated(id, driverFee.data.fee);
+}
+----
+
+[NOTE]
+====
+<1> Notice, we are just invoking the `+calculateDriverFee+`, that doesn't return anything.
+It's asynchronous.
+<2> We are using the `@EventListener` annotation to listen for the domain events within the application.
+Don't confuse this with _Cloud Events_ that are sent and received outside the application.
+<3> The exact fee is calculated by the _Drivers_ module, and we'll be notified later, with the `+driverFeeCalculated+` method.
+====
+
+To communicate with the _Event Mesh_, we need to add a new _Cloud Event_ sender and listener.
+That's being done similarly, as in the case of _Rust_ application.
+
+Below, you can see how you may implement the _Cloud Event_ sender:
+
+[source,java]
+----
+@Service
+public class DriverFeeService {
+
+    private final CloudEventSender eventSender;
+
+    @Autowired
+    public DriverFeeService(EventSender eventSender) {
+        this.eventSender = eventSender;
+    }
+
+    public void calculateDriverFee(UUID rideId, Money transitPrice, Long driverId) {
+        eventSender.send(new CalculateFee(
+            rideId,
+            driverId,
+            transitPrice.toInt()
+        ));
+    }
+}
+
+@Service
+public class CloudEventSender {
+
+  private static final Logger log = LoggerFactory.getLogger(EventSender.class);
+
+  private final KnativeConfig knative;
+  private final List<Into<?>> converters;
+
+  @Autowired
+  CloudEventSender(KnativeConfig knative, List<Into<?>> converters) {
+    this.knative = knative;
+    this.converters = converters;
+  }
+
+  public void send(Object event) {
+    try {
+      unsafeSend(event);
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  private <T> void unsafeSend(T event) throws IOException {
+    Into<T> convert = (Into<T>) converters.stream()
+        .filter(c -> c.accepts(event))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException(
+          "Cannot find converter for " + event.getClass()));
+    CloudEvent ce = convert.into(event);
+    URL url = knative.getSink();
+    log.info("Publishing event to {} : {}", url, ce);
+    HttpURLConnection http = (HttpURLConnection) url.openConnection();
+    http.setRequestMethod("POST");
+    http.setDoOutput(true);
+    http.setDoInput(true);
+
+    HttpMessageWriter messageWriter = createMessageWriter(http);
+    messageWriter.writeBinary(ce);
+
+    int code = http.getResponseCode();
+    if (code < 200 || code >= 300) {
+      throw new IOException("Unexpected response code " + code);
+    }
+  }
+}
+----
+
+Once again, notice this is just a simple _HTTP_ client doing the _POST_ request, with the body being the JSON representation of the _CloudEvent_.
+
+The last part to see is the _HTTP_ listener on the legacy application side.
+This listener will be responsible for receiving events from _Knative's Event Mesh_ and converting them into our custom event type:
+
+[source,java]
+----
+@RestController
+public class CloudEventReceiver {
+  private static final Logger log = LoggerFactory.getLogger(Receiver.class);
+
+  private final EventsPublisher eventsPublisher;
+  private final List<From<?>> froms;
+
+  @Autowired
+  Receiver(EventsPublisher eventsPublisher, List<From<?>> froms) {
+    this.eventsPublisher = eventsPublisher;
+    this.froms = froms;
+  }
+
+  @PostMapping("/")
+  public void receive(@RequestBody CloudEvent event) {
+    log.info("Received event: {}", event);
+
+    for (From<?> from : froms) {
+      if (from.matches(event)) {
+        Event ev = from.fromCloudEvent(event); // <1>
+        eventsPublisher.publish(ev); // <2>
+        return;
+      }
+    }
+
+    throw new IllegalStateException("No matching event type consumer found");
+  }
+}
+----
+
+<1> We unwrap the _CloudEvent_ into our domain event type (in the example that's the `+DriverFeeCalculated+` type)
+<2> And publish it withing the application, using the framework's _EventsPublisher_ implementation.
+The domain events will be transmitted to the methods annotated with `@EventListener`.
+
+[CAUTION]
+====
+Don't confuse the framework's _EventsPublisher_ with _Cloud Event_ sender and receiver.
+====
+
+=== The wiring of our _Event Mesh_
+
+To complete the solution, we need to configure the _Event Mesh_.
+The configuration describes the rules for receiving and sending events from and to the _Event Mesh_ and the application modules.
+
+Here are the sources in our case:
+
+[source,yaml]
+----
+apiVersion: sources.knative.dev/v1
+kind: SinkBinding
+metadata:
+  name: drivers-binding
+  namespace: demo
+spec:
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+      namespace: demo
+  subject:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    name: drivers
+    namespace: demo
+---
+apiVersion: sources.knative.dev/v1
+kind: SinkBinding
+metadata:
+  name: legacy-binding
+  namespace: demo
+spec:
+  sink:
+    ref:
+      apiVersion: eventing.knative.dev/v1
+      kind: Broker
+      name: default
+      namespace: demo
+  subject:
+    apiVersion: serving.knative.dev/v1
+    kind: Service
+    name: legacy
+    namespace: demo
+----
+
+We are using the _SinkBinding_ resource to bind an event source (the _Service_) with an event sink (_Broker_).
+We have two applications that will feed their events into the _Event Mesh_, so we need two _SinkBinding_ resources.
+
+Lastly, we have to configure the _Broker_ to send events from the _Event Mesh_ to the expected application modules.
+We use the _Trigger_ resource for this purpose.
+
+[source,yaml]
+----
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  name: trg-drivers
+  namespace: demo
+spec:
+  broker: default
+  filter:
+    attributes:
+      type: cabs.drivers.calculate-fee # <1>
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: drivers
+      namespace: demo
+---
+apiVersion: eventing.knative.dev/v1
+kind: Trigger
+metadata:
+  name: trg-legacy
+  namespace: demo
+spec:
+  broker: default
+  filter:
+    attributes:
+      type: cabs.drivers.driver-fee # <1>
+  subscriber:
+    ref:
+      apiVersion: serving.knative.dev/v1
+      kind: Service
+      name: legacy
+      namespace: demo
+----
+
+<1> Note, we specify the type of the event, as a filter.
+
+[#_conclusion]
+== Conclusion
+
+Let's step back and take a look at what we have accomplished.
+
+The refactored application code fragment is now distributed, resilient, and eventually consistent.
+It will gracefully handle the failures that may happen while calculating the driver's fee.
+The _Event Mesh_ will make sure to retry the event delivery, in case of failures on either side.
+
+We could extend the refactoring, even further, with the same principle, making the whole application modern, responsible, and without incorrect, unnecessary, transactional behavior.
+
+

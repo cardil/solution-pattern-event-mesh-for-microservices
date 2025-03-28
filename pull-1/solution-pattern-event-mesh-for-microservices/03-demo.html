@@ -233,7 +233,7 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 <table>
 <tr>
 <td><i class="conum" data-value="1"></i><b>1</b></td>
-<td>It uses the <code>@Transational</code> annotation, and modify number of unrelated data stores.</td>
+<td>It uses the <code>@Transactional</code> annotation, and modifies multiple unrelated data stores.</td>
 </tr>
 <tr>
 <td><i class="conum" data-value="2"></i><b>2</b></td>
@@ -270,7 +270,7 @@ In effect, the end-user will receive a nasty error message.</p>
 </td>
 <td class="content">
 <div class="paragraph">
-<p>Outages from the dependant services must not invalidate the main intent.
+<p>Outages from the dependent services must not invalidate the main intent.
 In fact, all the operations in this example could happen independently, and at different, yet reasonable times.</p>
 </div>
 </td>
@@ -288,7 +288,7 @@ When new features are added, it keeps growing as developers cramp new instructio
 </div>
 <div class="paragraph">
 <p>Of course, the developers could re-architect the code, to extract instructions to a separate blocks, but that is just a half-measure.
-Still, the application will do all the operations, starting from <code>completeTransit</code> method in the same time, and withing the same <em>"script"</em>.</p>
+Still, the application will do all the operations, starting from <code>completeTransit</code> method in the same time, and within the same <em>"script"</em>.</p>
 </div>
 </div>
 </div>

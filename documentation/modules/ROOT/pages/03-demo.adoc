@@ -55,7 +55,7 @@ public void completeTransit(Long driverId, UUID requestUUID, Address destination
 ====
 There are issues with the above method.
 
-<1> It uses the `+@Transational+` annotation, and modify number of unrelated data stores.
+<1> It uses the `+@Transactional+` annotation, and modifies multiple unrelated data stores.
 <2> It merges different, business domains.
 ====
 
@@ -75,7 +75,7 @@ In effect, the end-user will receive a nasty error message.
 
 [NOTE]
 ====
-Outages from the dependant services must not invalidate the main intent.
+Outages from the dependent services must not invalidate the main intent.
 In fact, all the operations in this example could happen independently, and at different, yet reasonable times.
 ====
 
@@ -87,7 +87,7 @@ The code starts small, easy to understand.
 When new features are added, it keeps growing as developers cramp new instructions into methods like `+completeTransit+`.
 
 Of course, the developers could re-architect the code, to extract instructions to a separate blocks, but that is just a half-measure.
-Still, the application will do all the operations, starting from `+completeTransit+` method in the same time, and withing the same _"script"_.
+Still, the application will do all the operations, starting from `+completeTransit+` method in the same time, and within the same _"script"_.
 
 [#_refactoring_plan]
 == Refactoring plan
@@ -107,6 +107,7 @@ After the refactoring, the `+completeTransit+` code will use two event types:
 
 The diagram below shows the sequence of operations that happen when we initiate refactored `+completeTransit+` code.
 
+// TODO: Replace with custom graphics
 image::https://www.plantuml.com/plantuml/svg/VP1DJiCm58JtFiMZ-rmWYwgqeHkeX2WNUBK7Ok4ubdyYzVQuZKbe5TZ5olTcFiqcHFOnTKOyn1OTIC8d0xPLdwBH5iBb_rfgnpRIwWMVBC_qwDoAED3ul4MUBKSzW9u6vES1eRsYMzz_mT-YZS-W3tJeLUwyOdlW23zeYJkK8vyuZ52p5O9bRk687uTYLgrB4zNqcav6XvPsR6GocTsZQ8d2L1aV3slQzVP3-uuKpCNgB1JkEwQpzI_FcjxoL5XgcUvdMioVL4soi-iuIOQcE5N259RYPgKYMNJ-3lfdkMPRqp7s7lJkjQFBvWihR61Lwimt[width=100%]
 
 ////

@@ -100,6 +100,7 @@ The potential events are transmitted to the _Event Mesh_.
 5. The dispatch loop continues until the event queue is empty and all the events are processed successfully.
 The failures are automatically retried by the _Event Mesh_, with an increasing pauses between retries to avoid overloading the system.
 
+// TODO: Replace with custom graphics
 image::https://img.plantuml.biz/plantuml/svg/TPFDReGW483lFCNKkpw0XytMRDCqxJQRDdq05iULB885j35Dtxs8k2xxSuEPRpvm1jV6KcsxHf07MsE3m51t0gbCLMS5bqZCaSkMQjh0kBL3Yz0gCVWSOK9r9IHFFKeBMpHr0hy4WAccLNAC9Q-IMjuZ55eTKIT0JLWwxBl33Xr2goFr6RyYVuHKIfIe8TbofXKOr3rdQAxa6-tKsi3d17X7Y8MGuqjgwPuQNF1DSKvkYbZw8dl56PU7I3j5yPPsAGZYm5wAtvNb5MUk7qf6xlF4V81hmbdf6nue6y0Cnc9prOQGVMnRhvksqHK3CNzuCUf3B2tLZqnNOIevxBgzuAO676TgPYhJ_53RRELg8OUlrgdH-ybKjm1-XexPkTPoOsTFF1R815OZVUVK84tTlUB273xSmyGRN3oW-zoDPb_0brVDLijJoU4PhG4kAmLqxwgWd58aFjzNdTx1gMCX0XgPqgKXQvIb-_d-0G00[width=100%]
 
 ////

@@ -724,12 +724,12 @@ After the fee was calculated, the <code>cabs.drivers.driver-fee</code> event was
       knativearrivaltime: '2025-02-04T17:48:11.655926003Z'
       Binary data: "{\"driver-id\":1993432552,\"transit-price\":5100}"
 
-[DEBUG drivers::drivers::service] fee event: Subject {
+[DEBUG drivers::drivers::service] calculate fee for: Subject {
  id: Some("005be37e-8971-4a5b-b5e7-dd18de3c1184"),
  entity: CalculateFeeEvent {
   driver_id: Identifier(1993432552),
   transit_price: Money(5100) } }
-[DEBUG drivers::drivers::service] fee: Money(4856)
+[DEBUG drivers::drivers::service] fee value: Money(4856)
 [DEBUG drivers::support::cloudevents] sending cabs.drivers.driver-fee event to
  http://broker-ingress.knative-eventing.svc.cluster.local/demo/default:
   Event { attributes: V10(Attributes { id: "939babd7-6a85-4859-b45b-66087aba9418",

@@ -392,7 +392,7 @@ spec:
 </div>
 <div class="listingblock console-input">
 <div class="content">
-<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">git clone https://github.com/cardil/cabs-usvc
+<pre class="highlightjs highlight"><code class="language-shell hljs" data-lang="shell">git clone https://github.com/openshift-knative/cabs-usvc
 oc apply -f cabs-usvc/deploy/serverless/operator.yaml
 oc wait csv/serverless-operator.v1.35.0 \
   --for 'jsonpath={.status.conditions[?(@.phase == "Succeeded")]}'</code></pre>
@@ -504,13 +504,13 @@ knativeeventing.operator.knative.dev/knative-eventing condition met</code></pre>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/legacy.yaml">The legacy application</a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/apps/legacy.yaml">The legacy application</a></p>
 </li>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/db/redis.yaml">The Drivers database</a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/db/redis.yaml">The Drivers database</a></p>
 </li>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/drivers.yaml">The Drivers module</a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/apps/drivers.yaml">The Drivers module</a></p>
 </li>
 </ul>
 </div>
@@ -556,13 +556,13 @@ service.serving.knative.dev/legacy condition met</code></pre>
 <div class="ulist">
 <ul>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/broker.yaml"><em>Broker</em></a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/broker.yaml"><em>Broker</em></a></p>
 </li>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/sources.yaml">Sources</a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/sources.yaml">Sources</a></p>
 </li>
 <li>
-<p><a href="https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/triggers.yaml">Triggers</a></p>
+<p><a href="https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/triggers.yaml">Triggers</a></p>
 </li>
 </ul>
 </div>

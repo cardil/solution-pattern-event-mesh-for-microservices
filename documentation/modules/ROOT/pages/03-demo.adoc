@@ -193,7 +193,7 @@ Here are commands to apply the above manifests.
 [.console-input]
 [source,shell]
 ----
-git clone https://github.com/cardil/cabs-usvc
+git clone https://github.com/openshift-knative/cabs-usvc
 oc apply -f cabs-usvc/deploy/serverless/operator.yaml
 oc wait csv/serverless-operator.v1.35.0 \
   --for 'jsonpath={.status.conditions[?(@.phase == "Succeeded")]}'
@@ -286,9 +286,9 @@ knativeeventing.operator.knative.dev/knative-eventing condition met
 
 To install the Demo application, apply the following manifests.
 
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/legacy.yaml[The legacy application]
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/db/redis.yaml[The Drivers database]
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/apps/drivers.yaml[The Drivers module]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/apps/legacy.yaml[The legacy application]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/db/redis.yaml[The Drivers database]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/apps/drivers.yaml[The Drivers module]
 
 Here are commands to apply the above manifests.
 
@@ -326,9 +326,9 @@ service.serving.knative.dev/legacy condition met
 
 To configure the Event Mesh, apply the following manifests.
 
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/broker.yaml[_Broker_]
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/sources.yaml[Sources]
-* https://github.com/cardil/cabs-usvc/blob/main/deploy/mesh/triggers.yaml[Triggers]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/broker.yaml[_Broker_]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/sources.yaml[Sources]
+* https://github.com/openshift-knative/cabs-usvc/blob/main/deploy/mesh/triggers.yaml[Triggers]
 
 Here are commands to apply the above manifests.
 

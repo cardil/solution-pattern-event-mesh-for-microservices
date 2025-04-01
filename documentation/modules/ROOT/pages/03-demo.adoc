@@ -373,7 +373,7 @@ trigger.eventing.knative.dev/trg-drivers condition met
 trigger.eventing.knative.dev/trg-drivers condition met
 ----
 
-The OpenShift Container Platform provides can provide a clear visualization of our deployed solution.
+The OpenShift Container Platform can provide a clear visualization of our deployed solution.
 
 image::solution-odc.png[width=100%]
 

@@ -1,5 +1,5 @@
-name: solution-pattern-event-mesh-for-microservices
-title: Event Mesh For Applications 
+name: solution-pattern-event-mesh-for-apps
+title: Event Mesh For Applications
 version: master
 nav:
   - modules/ROOT/nav.adoc

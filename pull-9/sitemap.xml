@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://redhat-solution-patterns.github.io/solution-patterns/solution-pattern-event-mesh-for-apps/01-pattern.html</loc>
+<lastmod>2025-04-01T16:42:58.009Z</lastmod>
+</url>
+<url>
+<loc>https://redhat-solution-patterns.github.io/solution-patterns/solution-pattern-event-mesh-for-apps/02-architecture.html</loc>
+<lastmod>2025-04-01T16:42:58.009Z</lastmod>
+</url>
+<url>
+<loc>https://redhat-solution-patterns.github.io/solution-patterns/solution-pattern-event-mesh-for-apps/03-demo.html</loc>
+<lastmod>2025-04-01T16:42:58.009Z</lastmod>
+</url>
+<url>
+<loc>https://redhat-solution-patterns.github.io/solution-patterns/solution-pattern-event-mesh-for-apps/developer-resources.html</loc>
+<lastmod>2025-04-01T16:42:58.009Z</lastmod>
+</url>
+<url>
+<loc>https://redhat-solution-patterns.github.io/solution-patterns/solution-pattern-event-mesh-for-apps/index.html</loc>
+<lastmod>2025-04-01T16:42:58.009Z</lastmod>
+</url>
+</urlset>

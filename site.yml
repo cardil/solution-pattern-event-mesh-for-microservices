@@ -4,7 +4,7 @@ runtime:
 site:
   title: Solution Patterns for Cloud Native Architectures
   url: https://redhat-solution-patterns.github.io/solution-patterns/
-  start_page: solution-pattern-template::index.adoc
+  start_page: solution-pattern-event-mesh-for-microservices::index.adoc
 
 content:
   sources:
@@ -21,7 +21,7 @@ asciidoc:
 
 ui:
   bundle:
-    url: https://github.com/redhat-solution-patterns/course-ui/releases/download/v0.1.16/ui-bundle.zip
+    url: https://github.com/redhat-solution-patterns/course-ui/releases/download/v0.1.17/ui-bundle.zip
     snapshot: true
   supplemental_files:
     - path: ./supplemental-ui

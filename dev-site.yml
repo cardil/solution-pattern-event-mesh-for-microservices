@@ -4,7 +4,7 @@ runtime:
 site:
   title: Solution Patterns for Cloud Native Architectures (Dev Mode)  
   url: http://localhost:3000/
-  start_page: solution-pattern-template::index.adoc
+  start_page: solution-pattern-event-mesh-for-microservices::index.adoc
 
 content:
   sources:
@@ -12,14 +12,12 @@ content:
       branches: HEAD
       start_path: documentation
 asciidoc:
-  attributes:
-    title: Red Hat Solution Patterns (Dev Mode)
   extensions:
     - ./lib/remote-include-processor.js
     - ./lib/tab-block.js
 ui:
   bundle:
-    url: https://github.com/redhat-solution-patterns/course-ui/releases/download/v0.1.16/ui-bundle.zip
+    url: https://github.com/redhat-solution-patterns/course-ui/releases/download/v0.1.17/ui-bundle.zip
     snapshot: true
   supplemental_files: ./supplemental-ui
 output:

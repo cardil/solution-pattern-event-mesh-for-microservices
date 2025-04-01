@@ -1,28 +1,43 @@
-= Solution Patterns: Template Name
+= Building Apps around the Event Mesh
 :page-layout: home
 :sectnums:
 :sectlinks:
 :doctype: book
 
-A brief introduction of this solution pattern.
+Understanding how to structure an application can be challenging. Different
+architectural patterns often lack insight into how to build day-to-day solutions
+that are often at least as complex as the business they operate in. 
 
-_Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum_
+This solution pattern is written to make it obvious and to show simple, yet
+elegant, correct, and comprehensive way of building software, either in
+greenfield or even in legacy projects. This solution leverages the
+https://www.redhat.com/en/technologies/cloud-computing/openshift/serverless[Red Hat OpenShift Serverless]
+Eventing component, which implements the https://www.redhat.com/en/topics/integration/what-is-an-event-mesh[Event Mesh] pattern.
 
-*Contributors:* _Your Name(s) here (can add links to your profile)_
+*Contributors:* https://github.com/cardil[Chris Suszynski]
 
 ++++
  <br>
 ++++
 [NOTE]
 ====
-Solutions Patterns help you understand the art of the possible with Red Hat's portfolio, and not intended to be used as is for production environments. You are welcome use any part of this solution pattern for your own workloads.
+Solution Patterns help you understand the art of the possible with Red Hat's 
+portfolio, and not intended to be used as is for production environments. You
+are welcome to use any part of this solution pattern for your own workloads.
 ====
 [#use-cases]
 == Use cases
 
-Common use cases that can be address with this architecture are:
+Event mesh pattern simplifies the operational complexity of distributed 
+applications, making architectures more resilient and scalable.
 
-- xyz
-- xyz
+Common use cases that can be addressed with this architecture include:
+
+- *Correctness* and *consistency* across distributed applications and services, 
+  without the hassles of _Event Sourcing_.
+- *Modernising* legacy applications by extracting smaller *microservices* into a 
+  distributed and eventually consistent system.
+- *Enabling communication* with external services, that can be easily tested
+  using a common *developer toolkit*.
 
 include::01-pattern.adoc[]
